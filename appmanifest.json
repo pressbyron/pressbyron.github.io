@@ -1,7 +1,7 @@
 {
 	"name": "word_guesser",
 	"short_name": "word_guesser",
-	"description": "",
+	"description": "Word guesser game",
 	"start_url": "index.html",
 	"display": "fullscreen",
 	"orientation": "portrait",
