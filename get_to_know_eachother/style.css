@@ -62,3 +62,8 @@ html, body, canvas {
 }
 
 
+@font-face {
+	font-family: 'coolvetica condensed rg';
+	src: url('fonts/coolvetica condensed rg.otf') format('opentype');
+}
+
