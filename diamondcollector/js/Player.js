@@ -10,7 +10,7 @@ function Player() {
     this.goldEarned = 0;
     this.goldEarnedTotal = 0;
     this.income = 0;
-    this.level = 1;
+    this.level = 0;
     this.experience = 0;
     this.experienceWorkers = 0;
     this.unusedTalentPoints = 1;

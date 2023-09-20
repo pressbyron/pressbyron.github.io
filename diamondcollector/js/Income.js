@@ -99,13 +99,15 @@ function mine(evt) {
     var x = evt.clientX - rect.left;
     var y = evt.clientY - rect.top;
     fadeOut(canvas, context, "+Ore", x, y);
+	var dropAmount = Math.round(Math.random() * player.pickaxeMultiplier/10) + 1
 
     for (var j = 0; j < player.pickaxeMultiplier; j++) {
         for (var i = 0; i < player.inventory.length; i++) {
-            if (calculateMaterialDrop(player.inventory[i].material)) {
+            if (calculateMaterialDrop(player.inventory[i].material) && dropAmount > 0) {
                 player.inventory[i].owned++;
                 player.inventory[i].earned++;
                 player.inventory[i].earnedTotal++;
+				dropAmount--;
 
 
             }
