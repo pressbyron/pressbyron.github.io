@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="se">
+	<head>
+		<link rel="stylesheet" href="css/theme.css">
+		<script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
+		<!-- Latest compiled and minified CSS -->
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+		<!-- Latest compiled and minified JavaScript -->
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+		<meta charset="UTF-8">
+		<title>DiamondCollector</title>
+	</head>
+	<body>
+		<img src="images/logo_alpha.png" width="990" height="100" alt="logo">
+		<div id="updates">
+			<a href="/information.txt" target="blank_">Information</a> <a
+		href="/update.txt" target="blank_">Update log</a>
+	</div>
+	
+	
+	<div class="wrapper">
+		<ul class="nav nav-tabs">
+			<li class="active"><a data-toggle="tab" href="#tabs-1">Inventory</a></li>
+			<li><a data-toggle="tab" href="#tabs-2">Shop</a></li>
+			<li class="dropdown">
+				<a data-toggle="dropdown" class="dropdown-toggle" href="#">Crafting<b class="caret"></b></a>
+				<ul class="dropdown-menu">
+					<li><a data-toggle="tab" href="#tabs-3">Materials</a></li>
+					<li><a data-toggle="tab" href="#tabs-4">Upgrades</a></li>
+				</ul>
+			</li>
+		</ul>
+		<div class="row">
+			<div id="static-menu" class="col-md-2 text-primary text-center">
+				<button id="mine-btn" class="btn btn-primary">Click to mine</button>
+				<h1 id="gold-value"></h1>
+				<h2 id="income-value"></h2>
+			</div>
+			<div class="tab-content">
+				<div id="tabs-1" class="tab-pane fade in active">
+					<div id="row1" class="row"></div>
+				</div>
+				<div id="tabs-2" class="tab-pane fade">
+					<div id="row2" class="row"></div>
+				</div>
+				<div id="tabs-3" class="tab-pane fade">
+					<div class="progress">
+						<div id="craftingProgress" class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="45" aria-valuemin="2" aria-valuemax="100" style="width: 45%">
+							<span class="sr-only">45% Complete</span>
+						</div>
+					</div>
+					<div id="row3" class="row"></div>
+				</div>
+				<div id="tabs-4" class="tab-pane fade">
+					<p>Dropdown 2 content…</p>
+				</div>
+				
+			</div>
+		</div>
+	</div>
+	
+	<script type="application/javascript;version=1.7" src="js/Player.js"></script>
+	<script type="application/javascript;version=1.7" src="js/Material.js"></script>
+	<script type="application/javascript;version=1.7" src="js/Income.js"></script>
+	<script type="application/javascript;version=1.7" src="js/DynamicCreation.js"></script>
+	<script type="application/javascript;version=1.7" src="js/UpdateGui.js"></script>
+	<script type="application/javascript;version=1.7" src="js/Upgrade.js"></script>
+	<script type="application/javascript;version=1.7" src="js/Crafting.js"></script>
+</body>
+</html>

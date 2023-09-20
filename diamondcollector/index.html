@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="se">
+	<head>
+		<link rel="stylesheet" href="css/theme.css">
+		<script src="https://code.jquery.com/jquery-1.10.2.js"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
+		<!-- Latest compiled and minified CSS -->
+		<link rel="stylesheet" href="css/bootstrap.min.css">
+		<link rel="stylesheet" href="css/sweetalert.css">
+		<link rel="stylesheet" href="css/bootstrap-select.css">
+		<link href="css/titatoggle-dist.css" rel="stylesheet">
+		
+		<link href='https://fonts.googleapis.com/css?family=Press+Start+2P' rel='stylesheet' type='text/css'>
+		<!-- Latest compiled and minified JavaScript -->
+		<script src="js/bootstrap.min.js"></script>
+
+		<meta charset="UTF-8">
+		<meta property="og:url" content="http://diamondcollector.net" />
+		<meta property="og:image" content="http://www.diamondcollector.net/images/thumbnail.png" />
+		<meta property="og:title" content="Diamondcollector" />
+		<meta property="og:description" content="The idle-game where you are head of a mining company and your mission is to earn as much money as possible!" />
+		<title>Diamondcollector</title>
+	</head>
+	<body>
+		<!--facebook-->
+		<div id="fb-root"></div>
+		<script>(function(d, s, id) {
+ 		 var js, fjs = d.getElementsByTagName(s)[0];
+  		if (d.getElementById(id)) return;
+  		js = d.createElement(s); js.id = id;
+  		js.src = "//connect.facebook.net/sv_SE/sdk.js#xfbml=1&version=v2.5";
+  		fjs.parentNode.insertBefore(js, fjs);
+		}(document, 'script', 'facebook-jssdk'));</script>
+		<!-- end facebook -->
+
+		<div class="info message">
+			<p class="text-center" style="font-size: 12px;">Diamondcollector gains funds through adds, please consider white-listing this domain if you like the game :) *click bar to close*</p>
+		</div>
+		<div id="loading"></div>
+		<div id="wrapper" class="wrapper" style="width: 90%; margin: auto;">
+		<div class="btn-group pull-right">
+		<a href="update.txt" class="link" target="_blank">Changelog</a>
+		<a href="#" class="link" data-toggle="modal" data-target="#myModal">Leave feedback</a>
+		<div class="fb-share-button" data-href="http://diamondcollector.net" data-layout="button_count"></div>
+		</div>
+
+		<!-- Modal -->
+<div id="myModal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Write some feedback!</h4>
+      </div>
+      <div class="modal-body">
+        <textarea id="feedback" class="form-control" style="min-width: 100%; max-width: 100%; min-height: 100%;"></textarea>
+      </div>
+      <div class="modal-footer">
+      	<button type="button" class="btn btn-default" data-dismiss="modal" onClick="sendFeedback()">Send</button>
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="imgModal" class="modal fade" role="dialog">
+  <div class="modal-dialog modal-lg">
+
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title">Sneakpeak!</h4>
+      </div>
+      <div class="modal-body">
+        <img class="img-responsive" src="images/teaser.png" width="800" height="600" alt="" />
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="tutorialModal" class="modal fade bs-example-modal-lg" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div id="carousel-example-generic" class="carousel slide" data-ride="carousel">
+  <!-- Wrapper for slides -->
+  <div class="carousel-inner">
+    <div class="item active">
+     <img class="img-responsive" src="images/howToPlay/TheStone.png">
+      <div class="carousel-caption">
+        Click the stone to get ores! <br>
+        -CPS (clicks per second) <br>
+        -CP (clicking power) <br> 
+        -lvl (player level) <br> 
+        -next lvl (how far you've gotten to next level).
+      </div>
+    </div>
+    <div class="item">
+      <img class="img-responsive" src="images/howToPlay/Selling.png">
+      <div class="carousel-caption">
+        Sell your ores by selecting the ones you want to sell in the dropdown, and choose an amount.
+      </div>
+    </div>
+     <div class="item">
+      <img class="img-responsive" src="images/howToPlay/Upgrades.png">
+      <div class="carousel-caption">
+        Buy upgrades which increase your CPS so you get ores without clicking!
+      </div>
+    </div>
+    <div class="item">
+      <img class="img-responsive" src="images/howToPlay/Progress.png">
+      <div class="carousel-caption">
+        Don't forget to choose a talent when starting. To gain levels, earn atleast 1 billion money and then reset the game to earn experience-workers.
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <a class="left carousel-control" href="#carousel-example-generic" role="button" data-slide="prev">
+    <span class="glyphicon glyphicon-chevron-left"></span>
+  </a>
+  <a class="right carousel-control" href="#carousel-example-generic" role="button" data-slide="next">
+    <span class="glyphicon glyphicon-chevron-right"></span>
+  </a>
+</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function sendFeedback(){
+	var x = $("#feedback").val();
+	ga('send', 'event', 'FeedBack', x);
+	swal("Thanks!", "We'll review your suggestions and consider putting them in the game :)", "success")
+}
+</script>
+		<h1 class="text-center">Diamondcollector</h1>
+		
+
+		
+
+			<p class="text-danger text-center">Diamondcollector is going trough big changes and getting remastered from the ground. A new update including a 2D environment and brand new lootsystem will roll out when it is completed. Stay tuned! <a href="#" class="link text-center" data-toggle="modal" data-target="#imgModal">Sneakpeak :)</a></p>
+			
+	
+	
+	<div class="text-center">
+		<div id="tab" class="btn-group" >
+              <a href="#tabs-1" onClick="javascript: ga('send', 'pageview', '/Inventory');" class="btn btn-large btn-info active" data-toggle="tab">Inventory</a>
+              <a href="#tabs-2" onClick="javascript: ga('send', 'pageview', '/Upgrades');" class="btn btn-large btn-info" data-toggle="tab">Upgrades</a>
+              <a href="#tabs-3" onClick="javascript: ga('send', 'pageview', '/Crafting');" class="btn btn-large btn-info" data-toggle="tab">Crafting</a>
+              <a href="#tabs-4" onClick="javascript: ga('send', 'pageview', '/Achivements');" class="btn btn-large btn-info"  data-toggle="tab">Achivements</a>
+              <a href="#tabs-5" onClick="javascript: ga('send', 'pageview', '/Progress');" class="btn btn-large btn-info"  data-toggle="tab">Progress <span id="avalibleTalents" class="label label-default"></span></a>
+              <a href="#tabs-6" onClick="javascript: ga('send', 'pageview', '/Help');" class="btn btn-large btn-info"  data-toggle="tab">Help</a>
+              <a href="#tabs-7" onClick="javascript: ga('send', 'pageview', '/Social');" class="btn btn-large btn-info"  data-toggle="tab">Social</a>
+            </div>
+        </div>
+    
+    <!--
+		<ul class="nav nav-tabs">
+			<li class="btn btn-large btn-info active"><a data-toggle="tab" href="#tabs-1">Inventory</a></li>
+			<li class="btn btn-large btn-info"><a data-toggle="tab" href="#tabs-2">Upgrades</a></li>
+			<li class="btn btn-large btn-info"><a data-toggle="tab" href="#tabs-3">Crafting</a></li>
+			<li class="btn btn-large btn-info"><a data-toggle="tab" href="#tabs-4">Achivements</a></li>
+			<li class="btn btn-large btn-info"><a data-toggle="tab" href="#tabs-5">Progress</a></li>
+			<li class="btn btn-large btn-info"><a data-toggle="tab" href="#tabs-6">Help</a></li>
+			<li class="btn btn-large btn-info"><a data-toggle="tab" href="#tabs-7">Social</a></li>
+		</ul>
+	-->
+		<div class="contentWrapper">
+			<div class="row" style="width: 98%; margin: auto;">
+				<div id="static-menu" class="col-md-2 text-center bordered" style="border-style: solid; border-width: 1px 0px 0px 1px;">
+					<div id="anim" class="animated">
+    						<div id="rays"></div>
+					</div>
+					<canvas id="myCanvas" onclick="mine(event)" width="150" height="150" style="background:url(images/rocksSmall.png) no-repeat;">
+					</canvas>
+					<h3 id="gold-value"></h3>
+					<h5 id="income-value"></h5>
+					<h5 id="clicking-power"></h5>
+					<h5 id="level-value"></h5>
+					<h5 id="to-next-level-value"></h5>
+				</div>
+				<div class="tab-content col-md-8 bordered padded-top" style="border-style: solid; border-width: 1px 1px 0px 1px;">
+					<div id="tabs-1" class="tab-pane fade in active">
+					<!--<div class="sell-header">
+					<form id="sell-ores">
+					<button type="submit" onclick="sellSelectedOres()"class="btn btn-primary btn-sm">Sell selected ores</button>
+					</form>
+					</div>-->
+					<div class="material text-center" style="padding: 1em 1em 1em 1em;">
+					<select id="sell-ores" class="selectpicker show-tick" multiple data-actions-box="true" data-width="350px">
+					</select>
+					<select id="sell-ores-count" class="selectpicker" data-width="100px">
+						<option value="1">x1</option>
+ 					 	<option value="10">x10</option>
+  						<option value="100">x100</option>
+  						<option value="0">All</option>
+					</select>
+					<button onclick="sellSelectedOres()" class="btn btn-primary btn-sm">Sell selected ores</button>
+					<button id="automaticSeller" onClick="autoSell()" class="btn btn-sm btn-warning" disabled><span id="automaticSellerSpan" class="glyphicon glyphicon-refresh"></span></button>
+				</div>
+						
+						
+						<div id="row1" class="row"></div>
+						</div>
+
+					<div id="tabs-2" class="tab-pane fade">
+						<div id="row2" class="row"></div>
+					</div>
+					<div id="tabs-3" class="tab-pane fade">
+						<div class="material clearFloat" style="padding: 1em 1em 1em 1em;">
+						<div class="material" style="padding: 1em 1em 1em 1em;">
+						<h3>Active crafting</h3>
+						<div class="progress" style="padding: 0">
+							<div id="craftingProgress" class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+							</div>
+						</div>
+						<div>
+							<span id="craftQue" class="craftText"></span>
+							<button onclick="abortCrafting()" class="btn btn-xs btn-danger col-lg-offset-0">Abort</button>
+						</div>
+					</div>
+					<div class="material" style="padding: 1em 1em 1em 1em;">
+						<h3>Idle crafting (crafttime x5)</h3> 
+						
+						<div class="progress" style="padding: 0">
+							<div id="craftingProgressIdle" class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+							</div>
+						</div>
+						<div>
+							<div class="checkbox checkbox-slider-md checkbox-slider--a">
+								<label>
+								<input id="idleCraftStatus" type="checkbox" disabled><span></span>
+								</label>
+							</div>
+							
+							<select id="idleCrafting" class="selectpicker show-tick" data-actions-box="true" data-width="200px">
+							</select>
+							<select id="craft-ores-count" class="selectpicker" data-width="100px">
+								<option value="1">x1</option>
+							</select>
+							
+						</div>
+
+					</div>
+
+						<div id="row3" class="row crafting padded-content"></div>
+
+					</div>
+						
+					</div>
+					
+					<div id="tabs-4" class="tab-pane fade">
+						<div class="material clearFloat" style="padding: 1em 1em 1em 1em;">
+						<h4 id="incomeBonus" class="craftText"></h4>
+						</div>
+						<div id="row4" class="row crafting padded-content"></div>
+					</div>
+					
+					<div id="tabs-5" class="tab-pane fade">
+						<div class="material" style="padding: 1em 1em 1em 1em;">
+							<h2>Level progress</h2>
+							<p>You are level: <span id="currentLevel"/></p>
+							<p>You have <span id="experienceWorkersOwned"/> experience workers.</p>
+							<div class="progress col-xs-12" style="padding: 0">
+								<span id="levelProgressText" class="progress-value"></span>
+								<div id="levelProgress" class="progress-bar active" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+								</div>
+							</div>
+							<h4>Talents</h4>
+							<p id="unusedTalents"></p>
+							<div id="talents"></div>
+							<h2>Reset game</h2>
+								<p>Reset your game and earn experience workers! These guys earn you experience which gives you levels which in turn will give you talentpoints to spend (soon). For now each level makes your upgrades 10% more effective. Each experience worker gives you 1 exp/second.</p>
+								<p>Your current money would give you: <span id="resetValue"/> experience workers.</p>
+								<button onclick="resetGame()" class="btn btn-xs btn-danger col-lg-offset-0">Reset game</button>
+							<h2>Statistics</h2>
+							<h5>Money earned:</h5>
+							<div id="moneyEarned" class=""></div>
+							<h5>Ores mined:</h5>
+							<div id="row5" class=""></div>
+							
+						</div>
+					</div>
+					<div id="tabs-6" class="tab-pane fade">
+						<div class="material" style="padding: 1em 1em 1em 1em;">
+							<h2>Hard reset</h2>
+							<p>
+								If the game is not working, try a hard reset to fix it!<br> It will wipe all your progress but make the game playable. Hopefully you don't need too use this function :(
+							</p>
+							<button onclick="resetGameHard()" class="btn btn-xs btn-danger col-lg-offset-0">Hard reset</button>
+							<h2>The Game</h2>
+							<p>	
+								Diamondcollector is a game in the genre "idle-gaming" and the goal is to have as much money / ores as possible. The concept of Diamondcollector is that you are in control of a mining company which is slowly growing and increasing its profits. Buying upgrades is like hiring workers or machinery that work for you so you don't have too get your hands dirty (by clicking).
+							</p>
+							<h2>How to play</h2>
+							<p>
+								Click the big rock to manually mine ores, this is the first step to be able to hire workers that does this for you. Sell your gained ores to collect money. Keep an eye on the crafting tab and see if there is something you need a specific ore to craft. For example the Sand pickaxe. This craftable increases your clickingpower and every click will earn you double the ores! This is a good first item to craft.
+							</p>
+							<p>
+								When you have enough money for the first upgrade you can start idling. This means that workers will earn you a specific clicks per second (CPS) while you just sit back and relax. Of course getting your hands dirty will give you more income but it is up too you if you want to do this or wait while your workers make you rich.
+							</p>
+							<p>
+								The progress tab is a level indicator, levels are earned by experience workers which in turn is gained by reseting your game. Experience workers costs 1,000,000,000 money each and gives you 1 experience / second. When you reset your game you only keep your experience workers and levels so make sure it is worth it!
+							</p>
+							<h2>Cookies</h2>
+							<p>
+								By playing this game you agree that we place 3rd party cookies in your browser. If you don't accept this please don't visit this website.
+							</p>
+						</div>
+					</div>
+						<div id="tabs-7" class="tab-pane fade">
+						<div class="material" style="padding: 1em 1em 1em 1em;">
+							<h2>The future</h2>
+							<p>
+								Diamondcollector is getting new updates every week, big and small. Other than game-logic and more stuff to craft / do more pictures are coming as fast as our artist have time to create them. We want to give every upgrade a special and unique look.
+							</p>
+							<h2>Share to friends</h2>
+							<p>
+								Diamondcollector is a new game and needs help to grow! If you enjoy the game please tell others about it :)
+							</p>
+						</div>
+					</div>
+				</div>
+				<div class="tab-content col-md-2 bordered" style="border-style: solid; border-width: 1px 1px 0px 0px;">
+					<div class="padded-top">
+					<script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+					<!-- Add -->
+					<ins class="adsbygoogle"
+   					  style="display:block"
+    					 data-ad-client="ca-pub-2085876101170741"
+    					 data-ad-slot="2698951519"
+   						  data-ad-format="auto"></ins>
+					<script>
+						(adsbygoogle = window.adsbygoogle || []).push({});
+					</script>
+				</div>
+				</div>
+
+			</div>
+		</div>
+	</div>
+
+	
+	<script type="application/javascript" src="js/Player.js"></script>
+	<script type="application/javascript" src="js/Material.js"></script>
+	<script type="application/javascript" src="js/Income.js"></script>
+	<script type="application/javascript" src="js/DynamicCreation.js"></script>
+	<script type="application/javascript" src="js/UpdateGui.js"></script>
+	<script type="application/javascript" src="js/Upgrade.js"></script>
+	<script type="application/javascript" src="js/Crafting.js"></script>
+	<script type="application/javascript" src="js/Bonuses.js"></script>
+	<script type="application/javascript" src="js/Save.js"></script>
+	<script type="application/javascript" src="js/Load.js"></script>
+	<script type="application/javascript" src="js/ResetGame.js"></script>
+	<script type="application/javascript" src="js/Levels.js"></script>
+	<script type="application/javascript" src="js/Achivements.js"></script>
+	<script type="application/javascript" src="js/Talents.js"></script>
+	<script type="application/javascript" src="js/ads.js"></script>
+	<script type="application/javascript" src="js/bootstrap-select.js"></script>
+	<script type="application/javascript" src="js/notify.min.js"></script>
+	<script type="application/javascript" src="js/sweetalert.min.js"></script>
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-74484727-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+
+<script>
+var myMessages = ['info','warning','error','success'];
+
+function hideAllMessages() {
+         var messagesHeights = new Array(); // this array will store height for each
+     
+         for (i=0; i<myMessages.length; i++) {
+          messagesHeights[i] = $('.' + myMessages[i]).outerHeight(); // fill array
+          $('.' + myMessages[i]).css('top', -messagesHeights[i] -500); //move element outside viewport     
+         }
+         }
+
+         function showMessage(type) {
+    $('.'+ type +'-trigger').click(function(){
+          hideAllMessages();                  
+          $('.'+type).animate({top:"0"}, 500);
+    });
+}
+
+$(document).ready(function(){
+
+     if(window.canRunAdds === undefined){
+
+     // Show message
+     for(var i=0;i<myMessages.length;i++)
+     {
+        showMessage(myMessages[i]);
+     }
+     
+     // When message is clicked, hide it
+     $('.message').click(function(){              
+              $(this).animate({top: -$(this).outerHeight() - 500}, 500);    
+      });      
+      }else{
+      	hideAllMessages();
+      }
+     
+});
+
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+Welcome to diamond collector!
+
+How to play:
+- Click the glowing stone!
+	- Gain ores!
+	- Craft materials
+	- Buy upgrades which autoclick for you!
+	- Get rich!
+
+*Disclaimer*
+- Diamondcollector is still in a Alpha development phase meaning that all items and values in game may change or dissapear.
+- Updates are rolled out regulary with Reset system, more crafting and balancing fixes as priority 1.
+- Updates are coming out with 1-2 week intervalls and always on sundays.

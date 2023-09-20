@@ -1,0 +1,1 @@
+var canRunAdds = true;

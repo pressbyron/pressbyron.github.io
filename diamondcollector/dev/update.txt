@@ -1,0 +1,51 @@
+2016-03-10
+ -Added more craftables including a new material, ElectronicChip and more workforce upgrades. Also balanced out some costs of earlier crafting.
+ -Ironed out some bugs
+	-Crafting progressbar should now be in sync with actual craft-timer.
+	-Selling all ores now should sell everything and not leave some items to be sold again.
+ -Improved performance of the site.
+ -Added more achivements and changed the first achivement for upgrades from 1 to 10 owned upgrades. Achivements will be updated later so they save trough resets.
+ -Inventory values now are displayed with short-numbers (e.g value: 25k instead of 25000).
+
+2016-03-09
+ -Break from developing
+
+2016-03-08
+ -Added a notification bar when levling up.
+
+2016-03-07
+ -Added more clicking-power craftables as some feedback is related to clicks beeing underpowered at higher levels. Will also add % upgrades later on.
+ -Added a small tutorial for new player, if the game can't locate a savefile a popup will show that asks if the player wants to see a tutorial :)
+ -Adding more workforce upgrades, prices are totaly random and will be balanced out later on.
+ -Added a automatic-seller craftable which is activated on the inventory-page. Sells selected amount of ores every 6 second. Added this if your saving up for something and want to keep track of your money.
+ -Added a new crafting category (workforce) here upgrades can be upgraded. (missing pictures so hover over them too se what it is for now).
+ -Crafting buttons are transparent when you can't afford them
+ -Crafted things become transparent and greyed out.
+ -Changed costs of some crafting stuff
+ -Idle crafting area must be unlocked by crafting it.
+
+2016-03-06
+ -Removed new tooltips because Safari users could not use crafting with it enabled. (will try to fix the bug and reenable them).
+ -Decreased droprates of almost all ores, hopefully the game is reaching a more balanced state now.
+ -New upgrade, SpaceSettlement! Something for you guys to reach for while im working on more crafting to create fun challenges.
+ -Fixed bug that appeared when farming for a while and selling all ores, ores in the 100k+ did not sell correctly and hopefully this is working as intended now.
+ -Added new tooltip for crafting and pictures. There may be pictures missing because of the cache. In chrome press F12 and then right-click the refresh button and choose clear cache to force clearing of cache. :)
+
+2016-03-05
+ -Fixed bug that made new players to the game not save correctly.
+ -Fixed bug in idle crafting that allowed players to craft things that did not have their requirements fullfilled.
+
+2016-03-04
+ -Added Droprate talent icon.
+ -Changed implementation of dropRate-bonus talent, were adding 0.5% to all ore rather than increasing it by 0.5%. This was very OP and diamond was too easy to get. May alter the percentage later when this fix is tried out.
+ -Added a changelog for the game
+ -Fixed bug that made crafting-progress-bars show the wrong value
+ -Fixed shorthand numbers for progress level
+ -Lowered experience needed for levels to balance out the game
+ -Added a CP (clickingpower) value in statusbar.
+ -Pickaxes now increase clickingpower by a certain +amount and not x2.
+ -Achivement tooltip contains less information, got annoying.
+ -Social information updated.
+ -Changed talent droprate from 10% to 0.5% as it was very unbalanced.
+ -Added notification on progress tab when there is unused talentpoints.
+ -Added feeback funciton as we want to know what you think about the game! Please leave both negative and positive feedback, example on feedback: income is too low in lategame.
