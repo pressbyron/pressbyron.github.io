@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The 10kr Millionaire</title>
+  <script async src="https://js.stripe.com/v3/buy-button.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f9f9f9;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      text-align: center;
+      max-width: 600px;
+      padding: 40px 20px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+    }
+
+    p {
+      font-size: 1.2rem;
+      margin-bottom: 30px;
+      color: #555;
+    }
+
+    footer {
+      margin-top: auto;
+      padding: 20px;
+      font-size: 0.9rem;
+      color: #888;
+      text-align: center;
+    }
+
+    .socials {
+      margin-top: 30px;
+    }
+
+    .socials a {
+      margin: 0 10px;
+      text-decoration: none;
+      font-size: 1.5rem;
+      color: #333;
+      transition: color 0.2s ease;
+    }
+
+    .socials a:hover {
+      color: #555;
+    }
+
+    .icon {
+      width: 24px;
+      height: 24px;
+      vertical-align: middle;
+    }
+    .disclaimer {
+      font-size: 0.85rem;
+      color: #999;
+      max-width: 500px;
+      margin: 20px auto;
+      text-align: center;
+      line-height: 1.5;
+    }
+    .counter-container {
+      font-size: 2rem;
+      font-weight: 500;
+      text-align: center;
+      margin: 30px auto;
+      max-width: 500px;
+      color: #444;
+    }
+
+
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Help Me Reach a Million</h1>
+  <p>Follow my journey to become a millionaire with just a button and a dream. Donate 1 USD (or more) and be part of the experiment!</p>
+  <div class="counter-container">
+    <span id="current-amount">0</span> / <span id="goal-amount">1,000,000</span> $
+  </div>
+  <stripe-buy-button
+          buy-button-id="buy_btn_1RtMsqC5XipKUMBdLYgTnF6F"
+          publishable-key="pk_test_51RtMgJC5XipKUMBdvbT2RuCjhyQ3hhfnDkgS8NAsmYYmyxckemFV55Ln4BMTq98JaEnCKEIZOVKWqNwFwB6rzJnF00jOfmsIor"
+  >
+  </stripe-buy-button>
+  <div class="socials">
+    <a href="https://www.tiktok.com/@dittkonto" target="_blank" title="TikTok">
+      <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/tiktok.svg" class="icon" alt="TikTok" />
+    </a>
+    <a href="https://www.instagram.com/dittkonto" target="_blank" title="Instagram">
+      <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/instagram.svg" class="icon" alt="Instagram" />
+    </a>
+  </div>
+</div>
+
+<footer>
+  <span>0.0125% of the earth population needs to donate to make this happen! Sounds easy enough? :)</span>
+  <p class="disclaimer">
+    All donations are voluntary and go toward funding this humorous experiment. No material or financial return is promised.
+    Any income may be reported as personal income according to Swedish tax regulations.
+  </p>
+</footer>
+
+</body>
+<script>
+  // Sätt dina värden här:
+  const goal = 1000000;      // Målet
+  const current = 0;      // Aktuell summa (ändra när du vill)
+
+  const currentEl = document.getElementById('current-amount');
+  const goalEl = document.getElementById('goal-amount');
+
+  goalEl.textContent = goal.toLocaleString();
+
+  // Funktion för att animera upp räkningen
+  function animateCountUp(endValue, duration = 2000) {
+    let startValue = 0;
+    let startTime = null;
+
+    function step(timestamp) {
+      if (!startTime) startTime = timestamp;
+      const progress = timestamp - startTime;
+      const val = Math.min(Math.floor((progress / duration) * endValue), endValue);
+      currentEl.textContent = val.toLocaleString();
+
+      if (progress < duration) {
+        window.requestAnimationFrame(step);
+      } else {
+        currentEl.textContent = endValue.toLocaleString();
+      }
+    }
+
+    window.requestAnimationFrame(step);
+  }
+
+  animateCountUp(current);
+</script>
+</html>
