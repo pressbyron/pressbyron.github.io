@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Box Synergy Idle - Background Frenzy</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
@@ -65,11 +65,31 @@
             <span>Inventory</span>
             <span style="color:var(--synergy); font-size:0.9rem;">✨ <span id="card-dust-display">0</span> DUST</span>
         </h3>
+        <div style="display: flex; gap: 5px; margin-bottom: 10px;">
+            <button class="card-action-btn scrap-btn" style="flex:1;" onclick="openBulkScrapModal('common')">Scrap All Common</button>
+            <button class="card-action-btn scrap-btn" style="flex:1;" onclick="openBulkScrapModal('rare')">Scrap All Rare</button>
+            <button class="card-action-btn scrap-btn" style="flex:1;" onclick="openBulkScrapModal('epic')">Scrap All Epic</button>
+        </div>
         <div class="inventory-grid" id="inventory-grid"></div>
-    </div>
-</div>
+        </div>
+        </div>
 
-<div class="modal-overlay" id="upgrade-modal" onclick="closeModal(event, 'upgrade-modal')">
+        <div class="modal-overlay" id="bulk-scrap-modal" onclick="closeModal(event, 'bulk-scrap-modal')">
+        <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <div class="modal-header" style="justify-content: center; border-bottom: none; margin-bottom: 0;">
+            <h2 style="color: var(--accent-1);">Scrap All <span id="bulk-rarity-text"></span>?</h2>
+        </div>
+
+        <p id="bulk-scrap-warning" style="color: var(--text); font-weight: 600; margin-bottom: 20px;"></p>
+
+        <div style="display: flex; gap: 15px; justify-content: center;">
+            <button class="btn-tactile draw-btn" style="background: var(--panel-light); color: var(--text); border-color: var(--border); box-shadow: 0 6px 0 var(--border); margin-bottom: 0; flex: 1;" onclick="toggleModal('bulk-scrap-modal')">Cancel</button>
+            <button id="bulk-scrap-confirm-btn" class="btn-tactile draw-btn danger-btn" style="margin-bottom: 0; flex: 1;" onclick="confirmBulkScrap()">Scrap All</button>
+            </div>
+            </div>
+            </div>
+        <div class="modal-overlay" id="switch-confirm-modal" onclick="closeModal(event, 'switch-confirm-modal')">
+
     <div class="modal-content" style="max-width: 400px; text-align: center;">
         <div class="modal-header">
             <h2 style="font-size: 1.4rem;">Upgrade Card</h2>
@@ -114,6 +134,21 @@
         </div>
         <div class="inventory-grid" id="equip-grid" style="margin-bottom: 25px;"></div>
         <button class="btn-tactile draw-btn danger-btn" style="margin-bottom:0;" onclick="unequipCurrentBox()">Unequip Card</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="switch-confirm-modal" onclick="closeModal(event, 'switch-confirm-modal')">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <div class="modal-header" style="justify-content: center; border-bottom: none; margin-bottom: 0;">
+            <h2 style="color: var(--accent-0);">Switch Card?</h2>
+        </div>
+        
+        <p style="color: var(--text); font-weight: 600; margin-bottom: 20px;">This will replace your currently equipped card. Are you sure?</p>
+
+        <div style="display: flex; gap: 15px; justify-content: center;">
+            <button class="btn-tactile draw-btn" style="background: var(--panel-light); color: var(--text); border-color: var(--border); box-shadow: 0 6px 0 var(--border); margin-bottom: 0; flex: 1;" onclick="toggleModal('switch-confirm-modal')">Cancel</button>
+            <button class="btn-tactile draw-btn" style="background: var(--accent-0); color: white; border-color: #1d4ed8; box-shadow: 0 6px 0 #1e3a8a; margin-bottom: 0; flex: 1;" onclick="confirmSwitch()">Switch</button>
+        </div>
     </div>
 </div>
 
@@ -162,12 +197,12 @@
                 <span class="icon-circle" style="background:var(--border); font-size:1rem;">⚙</span>
             </button>
             <button class="btn-tactile top-btn shop-btn" onclick="toggleModal('shop-modal')">
-                <span class="icon-circle" style="background:#4338ca;">🃏</span> Shop
+                Card Shop
             </button>
         </div>
 
         <button class="btn-tactile top-btn talent-btn" onclick="toggleModal('talent-modal')">
-            <span class="icon-circle" style="background:var(--token-gold); color:#000;">P</span> Talents (<span id="btn-tokens">0</span>)
+            Talents (<span id="btn-tokens">0</span> PT)
         </button>
     </div>
 
@@ -175,7 +210,11 @@
     <div class="upgrades-container" id="upgrades-container"></div>
 </div>
 
-<script src="game.js"></script>
+<script src="js/constants.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/cards.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/game.js"></script>
 
 </body>
 </html>

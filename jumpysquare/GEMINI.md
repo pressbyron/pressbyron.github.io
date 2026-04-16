@@ -4,7 +4,7 @@ This file contains foundational mandates for Gemini CLI when working on this pro
 
 ## Token Efficiency & Context Management
 - **Surgical Edits:** Always use `replace` for file modifications. Never rewrite entire files unless they are new or extremely small (< 50 lines).
-- **Split Files:** The project is split into `index.html`, `style.css`, and `game.js`. Only read the file(s) relevant to the current task.
+- **Split Files:** The project is organized into `index.html`, `css/style.css`, and modular JavaScript files in `js/` (`constants.js`, `storage.js`, `game.js`). Only read the file(s) relevant to the current task.
 - **Dry Responses:** Do not provide summaries, explanations of changes, or "I have finished" messages unless explicitly asked. Focus on intent before acting and validation after acting.
 - **Minimize `read_file`:** Use `grep_search` to find specific code blocks. If you must read a file, use `start_line` and `end_line` to target the necessary section.
 
