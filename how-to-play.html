@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How to Play - Poly Jump</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        body {
+            padding: 40px 20px;
+            display: block;
+            height: auto;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .content-container {
+            background: var(--panel);
+            padding: 40px;
+            border-radius: 16px;
+            border: 2px solid var(--border);
+            line-height: 1.6;
+        }
+        h1 { color: var(--synergy); margin-top: 0; text-transform: uppercase; letter-spacing: 2px; }
+        h2 { color: var(--text); margin-top: 30px; font-size: 1.4rem; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid var(--border); padding-bottom: 10px; }
+        h3 { color: var(--accent-0); margin-top: 20px; }
+        p { color: var(--text-dim); margin-bottom: 15px; }
+        strong { color: var(--text); }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: var(--accent-0);
+            text-decoration: none;
+            font-weight: 800;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+        }
+        .back-link:hover { text-decoration: underline; }
+        .guide-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        @media (max-width: 600px) {
+            .guide-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <a href="/" class="back-link">← Back to Game</a>
+
+    <div class="content-container">
+        <h1>How to Play Poly Jump</h1>
+        <p>Welcome to the ultimate guide for mastering <strong>Poly Jump</strong>. Follow these strategies to maximize your wealth and climb the leaderboard.</p>
+
+        <div class="guide-grid">
+            <div class="guide-item">
+                <h2>1. The Basics</h2>
+                <h3>Jumping</h3>
+                <p>Click any active box on the stage to make it jump. Each jump earns you money based on the box's <strong>Value</strong> stat.</p>
+                <h3>Upgrades</h3>
+                <p>Use your earned money to upgrade three key areas:</p>
+                <ul>
+                    <li><strong>Value:</strong> Increases money earned per jump.</li>
+                    <li><strong>Jump Speed:</strong> Reduces the cooldown between manual jumps.</li>
+                    <li><strong>Auto-Bot:</strong> Automates the jumping process for passive income.</li>
+                </ul>
+            </div>
+
+            <div class="guide-item">
+                <h2>2. Advanced Synergy</h2>
+                <p>Synergy is the core mechanic of Poly Jump. When two <strong>adjacent</strong> boxes jump at nearly the same time, they trigger a <strong>Synergy Bonus</strong>.</p>
+                <ul>
+                    <li><strong>Multiplier:</strong> Base synergy grants a <strong>x2 bonus</strong> to the jump value.</li>
+                    <li><strong>Strategy:</strong> Watch the jump timers and try to sync your clicks. Auto-Bots can also trigger synergies with your manual jumps!</li>
+                </ul>
+            </div>
+
+            <div class="guide-item">
+                <h2>3. Card System</h2>
+                <p>The Card Shop allows you to customize your boxes with powerful artifacts.</p>
+                <ul>
+                    <li><strong>Draw:</strong> Spend money to draw random cards of varying rarities (Common, Rare, Epic).</li>
+                    <li><strong>Equip:</strong> Each box can hold one card at a time. Choose cards that complement the box's strengths.</li>
+                    <li><strong>Dust & Upgrades:</strong> Scrap unwanted cards to earn <strong>Dust</strong>, which is used to level up your equipped cards.</li>
+                </ul>
+            </div>
+
+            <div class="guide-item">
+                <h2>4. Prestige & Talents</h2>
+                <p>When a box reaches its jump target, it becomes eligible for <strong>Prestige</strong>.</p>
+                <ul>
+                    <li><strong>The Reset:</strong> Prestiging a box resets its individual upgrades but grants a permanent <strong>x1.5 Value Multiplier</strong>.</li>
+                    <li><strong>Prestige Tokens (PT):</strong> Earn 1 PT per prestige to spend on <strong>Global Talents</strong>.</li>
+                    <li><strong>Talents:</strong> These are permanent buffs that affect all boxes, even through resets. Focus on "Persistent Bots" and "Wider Synergy" early on!</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

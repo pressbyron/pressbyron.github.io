@@ -49,10 +49,19 @@ body {
     overflow-x: hidden;
 }
 
+.page-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+    width: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
 .main-card {
     background: var(--panel);
     width: 100%;
-    max-width: 1100px;
     border-radius: 16px;
     border: 2px solid var(--border);
     box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 2px 0 rgba(255,255,255,0.05);
@@ -63,6 +72,44 @@ body {
     position: relative;
     z-index: 10;
 }
+
+/* About Section */
+.about-section {
+    width: 100%;
+    padding: 20px 0 60px 0;
+}
+.about-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+}
+.about-card {
+    background: rgba(15, 23, 42, 0.3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    transition: 0.3s;
+}
+.about-card:hover {
+    background: rgba(15, 23, 42, 0.5);
+    border-color: var(--text-dim);
+}
+.about-card h3 {
+    margin-top: 0;
+    color: var(--text);
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+}
+.about-card p {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    line-height: 1.6;
+    margin: 0;
+}
+.about-card strong { color: var(--synergy); }
+
 
 .header {
     text-align: center;
@@ -487,7 +534,101 @@ body {
 .modal-alert h3 { margin-top: 0; color: var(--text); font-size: 1.1rem; text-transform: uppercase; }
 .modal-alert p { color: var(--text-dim); font-size: 0.9rem; line-height: 1.5; margin-bottom: 0; }
 
+/* Site Footer */
+.site-footer {
+    margin-top: auto;
+    padding-top: 20px;
+    text-align: center;
+}
+.footer-links {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.footer-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    transition: 0.2s;
+    opacity: 0.6;
+}
+.footer-links a:hover { color: var(--accent-0); opacity: 1; }
+.footer-sep { color: var(--border); opacity: 0.4; }
+
+/* Legal Modal Styling */
+.legal-modal-content { max-width: 750px; }
+.legal-body {
+    line-height: 1.6;
+    color: var(--text-dim);
+    font-size: 0.95rem;
+    text-align: left;
+}
+.legal-body h3 {
+    color: var(--text);
+    margin-top: 25px;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.legal-body strong { color: var(--accent-0); }
+.legal-body ul { padding-left: 20px; }
+.legal-body li { margin-bottom: 8px; }
+
+/* Cookie Banner */
+.cookie-banner {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--panel);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    width: 320px;
+    padding: 15px;
+    z-index: 2000;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    display: none;
+    animation: slideInUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.cookie-banner.active { display: block; }
+@keyframes slideInUp {
+    from { transform: translateY(100px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+.cookie-banner-content p {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    line-height: 1.4;
+    margin: 0 0 12px 0;
+}
+.cookie-banner-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.cookie-banner-actions a {
+    color: var(--accent-0);
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    text-decoration: none;
+}
+.cookie-banner-actions a:hover { text-decoration: underline; }
+.accept-btn {
+    background: var(--synergy);
+    color: white;
+    border: none;
+    padding: 6px 16px;
+    font-size: 0.75rem;
+    box-shadow: 0 4px 0 #0e7490;
+}
+.accept-btn:active { box-shadow: 0 0px 0 #0e7490; }
+
 @media (max-width: 600px) {
+    .page-wrapper { gap: 20px; }
+    .about-section { padding: 10px 0 40px 0; }
     .top-left-actions { position: relative; justify-content: center; width: 100%; margin-bottom: 10px; }
     .talent-btn { position: relative; width: 100%; justify-content: center; margin-bottom: 10px; }
     .header { display: flex; flex-direction: column; }

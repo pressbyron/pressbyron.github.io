@@ -3,7 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Box Synergy Idle - Background Frenzy</title>
+    <title>Poly Jump - Ultimate Box Synergy Idle Game</title>
+    <meta name="description" content="Master the rhythm of the cubes in Poly Jump. An addictive idle game where timing, synergy, and strategic card upgrades lead to infinite wealth. Play now at idlepolyjump.com!">
+    <meta name="keywords" content="idle game, clicker game, box synergy, poly jump, incremental game, web game, free to play">
+    
+    <!-- Open Graph / Social Media -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://idlepolyjump.com/">
+    <meta property="og:title" content="Poly Jump - Ultimate Box Synergy Idle">
+    <meta property="og:description" content="Master the cubes, trigger synergies, and climb the prestige ranks. The most tactile idle game on the web.">
+    <meta property="og:image" content="https://idlepolyjump.com/og-image.png">
+
+    <!-- Favicon -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect x=%2210%22 y=%2210%22 width=%2280%22 height=%2280%22 rx=%2215%22 fill=%22%233b82f6%22/></svg>">
+    
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -184,35 +197,70 @@
     </div>
 </div>
 
-<div class="main-card">
-    <div class="header">
-        <div style="margin-bottom: 15px;">
-            <p>Total Capital</p>
-            <h1 id="total-money">$0</h1>
-            <div id="synergy-msg" class="synergy-indicator"></div>
+<div class="page-wrapper">
+    <div class="main-card">
+        <div class="header">
+            <div style="margin-bottom: 15px;">
+                <p>Total Capital</p>
+                <h1 id="total-money">$0</h1>
+                <div id="synergy-msg" class="synergy-indicator"></div>
+            </div>
+
+            <div class="top-left-actions">
+                <button class="btn-tactile top-btn settings-btn" onclick="toggleModal('settings-modal')">
+                    <span class="icon-circle" style="background:var(--border); font-size:1rem;">⚙</span>
+                </button>
+                <button class="btn-tactile top-btn shop-btn" onclick="toggleModal('shop-modal')">
+                    Card Shop
+                </button>
+            </div>
+
+            <button class="btn-tactile top-btn talent-btn" onclick="toggleModal('talent-modal')">
+                Talents (<span id="btn-tokens">0</span> PT)
+            </button>
         </div>
 
-        <div class="top-left-actions">
-            <button class="btn-tactile top-btn settings-btn" onclick="toggleModal('settings-modal')">
-                <span class="icon-circle" style="background:var(--border); font-size:1rem;">⚙</span>
-            </button>
-            <button class="btn-tactile top-btn shop-btn" onclick="toggleModal('shop-modal')">
-                Card Shop
-            </button>
-        </div>
+        <div class="stage" id="stage"></div>
+        <div class="upgrades-container" id="upgrades-container"></div>
 
-        <button class="btn-tactile top-btn talent-btn" onclick="toggleModal('talent-modal')">
-            Talents (<span id="btn-tokens">0</span> PT)
-        </button>
+        <footer class="site-footer">
+            <div class="footer-links">
+                <a href="how-to-play.html" target="_blank">How to Play</a>
+                <span class="footer-sep">|</span>
+                <a href="#" onclick="showLegal('privacy'); return false;">Privacy Policy</a>
+                <span class="footer-sep">|</span>
+                <a href="#" onclick="showLegal('cookies'); return false;">Cookie Policy</a>
+                <span class="footer-sep">|</span>
+                <a href="terms.html" target="_blank">Terms of Service</a>
+            </div>
+        </footer>
     </div>
+</div>
 
-    <div class="stage" id="stage"></div>
-    <div class="upgrades-container" id="upgrades-container"></div>
+<div class="modal-overlay" id="legal-modal" onclick="closeModal(event, 'legal-modal')">
+    <div class="modal-content legal-modal-content">
+        <div class="modal-header">
+            <h2 id="legal-modal-title">Legal Policy</h2>
+            <button class="close-btn" onclick="toggleModal('legal-modal')">✕</button>
+        </div>
+        <div id="legal-modal-body" class="legal-body"></div>
+    </div>
+</div>
+
+<div id="cookie-banner" class="cookie-banner">
+    <div class="cookie-banner-content">
+        <p>We use LocalStorage and third-party ads (Monetag) to improve your experience. By playing, you agree to our policies.</p>
+        <div class="cookie-banner-actions">
+            <a href="#" onclick="showLegal('privacy'); return false;">Privacy Policy</a>
+            <button class="btn-tactile accept-btn" onclick="acceptCookies()">Accept</button>
+        </div>
+    </div>
 </div>
 
 <script src="js/constants.js"></script>
 <script src="js/storage.js"></script>
 <script src="js/cards.js"></script>
+<script src="js/legal.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/game.js"></script>
 
