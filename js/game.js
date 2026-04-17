@@ -401,7 +401,7 @@ function unlockBox(idx) {
     }
 }
 
-function scrapCard(cardId) {
+function getGhostBoxInterval() {
     return 3000 / (1 + ghostBoxData.levelSpeed * 0.25); // Faster jump
 }
 function getGhostBoxValueMult() {
@@ -430,7 +430,8 @@ function unlockGhostBox() {
 
 function buyGhostUp(type) {
     const cost = getGhostUpCost(type);
-    const btn = document.getElementById(`up-ghost-${type}`);
+    const btn = ghostBoxData.cachedElements[`up${type.charAt(0).toUpperCase() + type.slice(1)}`];
+
     if (money >= cost) {
         money -= cost;
         if (type === 'speed') ghostBoxData.levelSpeed++;
