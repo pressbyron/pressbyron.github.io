@@ -200,24 +200,26 @@
 <div class="page-wrapper">
     <div class="main-card">
         <div class="header">
+            <div class="action-bar">
+                <div class="top-left-actions">
+                    <button class="btn-tactile top-btn settings-btn" onclick="toggleModal('settings-modal')">
+                        <span class="icon-circle" style="background:var(--border); font-size:1rem;">⚙</span>
+                    </button>
+                    <button class="btn-tactile top-btn shop-btn" onclick="toggleModal('shop-modal')">
+                        Card Shop
+                    </button>
+                </div>
+
+                <button class="btn-tactile top-btn talent-btn" onclick="toggleModal('talent-modal')">
+                    Talents (<span id="btn-tokens">0</span> PT)
+                </button>
+            </div>
+
             <div style="margin-bottom: 15px;">
                 <p>Total Capital</p>
                 <h1 id="total-money">$0</h1>
                 <div id="synergy-msg" class="synergy-indicator"></div>
             </div>
-
-            <div class="top-left-actions">
-                <button class="btn-tactile top-btn settings-btn" onclick="toggleModal('settings-modal')">
-                    <span class="icon-circle" style="background:var(--border); font-size:1rem;">⚙</span>
-                </button>
-                <button class="btn-tactile top-btn shop-btn" onclick="toggleModal('shop-modal')">
-                    Card Shop
-                </button>
-            </div>
-
-            <button class="btn-tactile top-btn talent-btn" onclick="toggleModal('talent-modal')">
-                Talents (<span id="btn-tokens">0</span> PT)
-            </button>
         </div>
 
         <div class="stage" id="stage"></div>
