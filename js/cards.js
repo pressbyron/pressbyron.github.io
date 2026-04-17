@@ -47,10 +47,10 @@ function startDrawAnimation() {
     if (roll > 0.95) rarity = 'epic';
     else if (roll > 0.70) rarity = 'rare';
 
-    // Tvingar första kortet att vara auto
+    // Tvingar första kortet att vara value boost
     let typeObj;
     if (isFirstCard) {
-        typeObj = cardTypes.find(c => c.id === 'auto');
+        typeObj = cardTypes.find(c => c.id === 'value');
     } else {
         typeObj = cardTypes[Math.floor(Math.random() * cardTypes.length)];
     }
@@ -91,6 +91,7 @@ function startDrawAnimation() {
         if (ticks >= maxTicks) {
             clearInterval(interval);
             finishDrawAnimation(pendingDrawnCard);
+            isDrawingCard = false; // Allow closing the modal now that animation is done
         }
     }, 80);
 }

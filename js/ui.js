@@ -5,6 +5,10 @@ function toggleModal(id) {
     if (!modal) return;
     
     if (modal.classList.contains('active')) {
+        // If closing the shop modal while a card is drawn but not collected, collect it automatically
+        if (id === 'shop-modal' && typeof pendingDrawnCard !== 'undefined' && pendingDrawnCard) {
+            collectCard();
+        }
         modal.classList.remove('active');
         setTimeout(() => { modal.style.display = 'none'; }, 200);
     } else {
@@ -23,6 +27,28 @@ function closeModal(e, id) {
 function openPrestigeModal(idx) {
     pendingPrestigeBox = idx;
     toggleModal('prestige-modal');
+}
+
+function toggleBoxCollapse(idx) {
+    const b = boxData[idx];
+    b.collapsed = !b.collapsed;
+    renderLayout();
+    updateUI();
+    saveGame();
+}
+
+function toggleGhostCollapse() {
+    ghostBoxData.collapsed = !ghostBoxData.collapsed;
+    renderLayout();
+    updateUI();
+    saveGame();
+}
+
+function dismissCardTutorial() {
+    toggleModal('card-tutorial-modal');
+    setTimeout(() => {
+        toggleModal('shop-modal');
+    }, 300);
 }
 
 function confirmPrestige() {
@@ -104,6 +130,8 @@ function renderLayout() {
     ghostCol.className = 'upgrade-col';
     ghostCol.style.borderTopColor = '#64748b'; // Gray
     
+    ghostBoxData.cachedElements = {}; // Clear previous cache
+    
     if (!ghostBoxData.active) {
         ghostCol.className = 'upgrade-col unlock-col';
         ghostCol.id = 'ghost-unlock-col';
@@ -115,16 +143,17 @@ function renderLayout() {
             </div>
         `;
         ghostCol.onclick = () => unlockGhostBox();
-        ghostBoxData.cachedElements.unlockCol = ghostCol;
-        ghostBoxData.cachedElements.unlockFill = document.getElementById('ghost-unlock-fill');
     } else {
         ghostCol.innerHTML = `
-            <div class="col-header" style="color:#64748b">Ghost Box</div>
+            <div class="col-header" style="color:#64748b">
+                <button class="collapse-toggle" onclick="toggleGhostCollapse()" style="margin-right: 8px;">${ghostBoxData.collapsed ? '▼' : '▲'}</button>
+                <span style="flex:1;">Ghost Box</span>
+            </div>
             <div class="jumps-counter">
                 <div class="jumps-counter-fill" id="ghost-sync-fill" style="background:var(--synergy); opacity:0.2;"></div>
                 <div class="jumps-counter-text" id="ghost-sync-text">Synergy: Cooldown</div>
             </div>
-            <div id="ghost-ups" style="display:flex; flex-direction:column; margin-top:5px;">
+            <div id="ghost-ups" style="display:${ghostBoxData.collapsed ? 'none' : 'flex'}; flex-direction:column; margin-top:5px;">
                 <button id="up-ghost-value" class="btn-tactile up-btn" onclick="buyGhostUp('value')">
                     <div>Ghost Value</div>
                     <div id="cost-ghost-value">$0</div>
@@ -141,9 +170,19 @@ function renderLayout() {
                     </div>
                 </button>
             </div>
+            ${ghostBoxData.collapsed ? `
+                <div class="mini-auto-container">
+                    <div class="auto-fill" id="ghost-fill-mini"></div>
+                </div>
+            ` : ''}
         `;
     }
     upgrades.appendChild(ghostCol);
+
+    if (!ghostBoxData.active) {
+        ghostBoxData.cachedElements.unlockCol = ghostCol;
+        ghostBoxData.cachedElements.unlockFill = document.getElementById('ghost-unlock-fill');
+    }
 
     boxData.forEach((b, idx) => {
         if (b.active) {
@@ -175,13 +214,14 @@ function renderLayout() {
             col.innerHTML = `
                 ${cardBadgeHtml}
                 <div class="col-header" style="color:${b.color}">
-                    ${b.name} ${badgeHtml}
+                    <button class="collapse-toggle" onclick="toggleBoxCollapse(${idx})" style="margin-right: 8px;">${b.collapsed ? '▼' : '▲'}</button>
+                    <span style="flex:1;">${b.name} ${badgeHtml}</span>
                 </div>
                 <div id="jump-count-${idx}" class="jumps-counter">
                     <div class="jumps-counter-fill" id="jump-fill-${idx}"></div>
                     <div class="jumps-counter-text" id="jump-text-${idx}">Jumps: 0 / 1,000</div>
                 </div>
-                <div id="ups-${idx}" style="display:flex; flex-direction:column; margin-top:5px;">
+                <div id="ups-${idx}" style="display:${b.collapsed ? 'none' : 'flex'}; flex-direction:column; margin-top:5px;">
                     <button id="up-inc-${idx}" class="btn-tactile up-btn" onclick="buyUp(${idx},'inc')">
                         <div id="up-inc-title-${idx}">Value</div>
                         <div id="up-inc-cost-${idx}">$0</div>
@@ -198,6 +238,11 @@ function renderLayout() {
                         </div>
                     </button>
                 </div>
+                ${b.collapsed ? `
+                    <div class="mini-auto-container">
+                        <div class="auto-fill" id="auto-fill-mini-${idx}"></div>
+                    </div>
+                ` : ''}
             `;
             upgrades.appendChild(col);
             
@@ -213,7 +258,7 @@ function renderLayout() {
             b.cachedElements.upDurCost = document.getElementById(`up-dur-cost-${idx}`);
             b.cachedElements.upAutoBtn = document.getElementById(`up-auto-${idx}`);
             b.cachedElements.upAutoCost = document.getElementById(`up-auto-cost-${idx}`);
-            b.cachedElements.autoFill = document.getElementById(`auto-fill-${idx}`);
+            b.cachedElements.autoFill = b.collapsed ? document.getElementById(`auto-fill-mini-${idx}`) : document.getElementById(`auto-fill-${idx}`);
             b.cachedElements.wrapper = document.getElementById(`wrapper-${idx}`);
         } else {
             const prevBox = boxData[idx-1];
@@ -292,6 +337,14 @@ function showSynergyFeedback(text, color) {
     setTimeout(() => { msg.innerText = ""; msg.style.color = "var(--synergy)"; }, 1500);
 }
 
+function flashError(el) {
+    if (!el) return;
+    el.classList.remove('error-flash');
+    void el.offsetWidth; // trigger reflow
+    el.classList.add('error-flash');
+    setTimeout(() => el.classList.remove('error-flash'), 400);
+}
+
 function updateUI() {
     const moneyFloor = Math.floor(money);
     const moneyChanged = moneyFloor !== lastMoney;
@@ -309,6 +362,23 @@ function updateUI() {
     const btnTokensEl = document.getElementById('btn-tokens');
     if (btnTokensEl) btnTokensEl.innerText = prestigeTokens;
     
+    // Card Shop Progress
+    const cardShopFill = document.getElementById('card-shop-fill');
+    if (cardShopFill) {
+        const cost = typeof getActualCardCost === 'function' ? getActualCardCost() : 1000;
+        const pct = Math.min(100, (money / cost) * 100);
+        cardShopFill.style.width = `${pct}%`;
+        
+        // One-time tutorial trigger
+        if (money >= cost && typeof hasSeenCardTutorial !== 'undefined' && !hasSeenCardTutorial) {
+            hasSeenCardTutorial = true;
+            setTimeout(() => {
+                toggleModal('card-tutorial-modal');
+                saveGame();
+            }, 500);
+        }
+    }
+    
     const dustDisplay = document.getElementById('card-dust-display');
     if (dustDisplay) dustDisplay.innerText = cardDust;
 
@@ -318,7 +388,8 @@ function updateUI() {
         const btn = document.getElementById('draw-card-btn');
         const actualCost = typeof getActualCardCost === 'function' ? getActualCardCost() : 0;
         if (btn && typeof isDrawingCard !== 'undefined' && !isDrawingCard) {
-            btn.disabled = money < actualCost;
+            if (money < actualCost) btn.classList.add('disabled-btn');
+            else btn.classList.remove('disabled-btn');
             btn.innerHTML = `Draw Card <span style="color:var(--bg); font-family:var(--font-mono); font-size:1rem; margin-left:5px;">$${actualCost.toLocaleString()}</span>`;
         }
     }
@@ -368,19 +439,22 @@ function updateUI() {
         const upSpeed = document.getElementById('up-ghost-speed');
         if (upSpeed) {
             const cost = getGhostUpCost('speed');
-            upSpeed.disabled = money < cost;
+            if (money < cost) upSpeed.classList.add('disabled-btn');
+            else upSpeed.classList.remove('disabled-btn');
             document.getElementById('cost-ghost-speed').innerHTML = `$${cost.toLocaleString()} <span style="color:var(--text-dim); font-size:0.7rem;">| ${(getGhostBoxInterval()/1000).toFixed(1)}s</span>`;
         }
         const upValue = document.getElementById('up-ghost-value');
         if (upValue) {
             const cost = getGhostUpCost('value');
-            upValue.disabled = money < cost;
+            if (money < cost) upValue.classList.add('disabled-btn');
+            else upValue.classList.remove('disabled-btn');
             document.getElementById('cost-ghost-value').innerHTML = `$${cost.toLocaleString()} <span style="color:var(--text-dim); font-size:0.7rem;">| ${(getGhostBoxValueMult()*100).toFixed(0)}%</span>`;
         }
         const upSync = document.getElementById('up-ghost-synergy');
         if (upSync) {
             const cost = getGhostUpCost('synergy');
-            upSync.disabled = money < cost;
+            if (money < cost) upSync.classList.add('disabled-btn');
+            else upSync.classList.remove('disabled-btn');
             document.getElementById('cost-ghost-synergy').innerHTML = `$${cost.toLocaleString()} <span style="color:var(--text-dim); font-size:0.7rem;">| ${(getGhostBoxSynergyCooldown()/1000).toFixed(1)}s</span>`;
         }
     }
@@ -439,7 +513,9 @@ function updateUI() {
 
             // Inc button
             if (ce.upIncBtn) {
-                ce.upIncBtn.disabled = money < b.incCost;
+                if (money < b.incCost) ce.upIncBtn.classList.add('disabled-btn');
+                else ce.upIncBtn.classList.remove('disabled-btn');
+                
                 const currentTotalValue = Math.floor(b.inc * prestigeMult * cardMults.value * talentValueMult);
                 const upgradeIncrease = Math.floor(b.baseInc * prestigeMult * cardMults.value * talentValueMult);
                 
@@ -450,7 +526,9 @@ function updateUI() {
             // Dur button
             if (ce.upDurBtn) {
                 const isMaxDur = b.dur <= b.minDur;
-                ce.upDurBtn.disabled = (money < b.durCost || isMaxDur);
+                if (money < b.durCost || isMaxDur) ce.upDurBtn.classList.add('disabled-btn');
+                else ce.upDurBtn.classList.remove('disabled-btn');
+                
                 const displayDur = b.dur / cardMults.speed;
                 if (ce.upDurCost) {
                     if (isMaxDur && cardMults.speed === 1) ce.upDurCost.innerText = 'MAX SPEED';
@@ -461,7 +539,9 @@ function updateUI() {
             // Auto button
             if (ce.upAutoBtn) {
                 const isMaxAuto = b.auto > 0 && b.auto <= b.minAuto;
-                ce.upAutoBtn.disabled = (money < b.autoCost || isMaxAuto);
+                if (money < b.autoCost || isMaxAuto) ce.upAutoBtn.classList.add('disabled-btn');
+                else ce.upAutoBtn.classList.remove('disabled-btn');
+                
                 const displayAuto = b.auto / cardMults.auto;
                 if (ce.upAutoCost) {
                     if (isMaxAuto && cardMults.auto === 1) ce.upAutoCost.innerText = 'MAX SPEED';

@@ -5,6 +5,7 @@ let cardDust = 0;
 let cards = [];
 let frenzyTimer = 0;
 let hasSeenSynergyTutorial = false;
+let hasSeenCardTutorial = false;
 let isWiping = false;
 
 function saveGame() {
@@ -12,10 +13,11 @@ function saveGame() {
     const boxProgress = boxData.map(b => ({
         active: b.active, jumps: b.jumps, prestige: b.prestige, equippedCard: b.equippedCard,
         inc: b.inc, incCost: b.incCost, dur: b.dur, durCost: b.durCost,
-        auto: b.auto, autoProgress: b.autoProgress, autoCost: b.autoCost
+        auto: b.auto, autoProgress: b.autoProgress, autoCost: b.autoCost,
+        collapsed: b.collapsed
     }));
 
-    const saveData = { money, prestigeTokens, nextCardId, cards, talents, boxProgress, frenzyTimer, hasSeenSynergyTutorial, cardDust, ghostBoxData };
+    const saveData = { money, prestigeTokens, nextCardId, cards, talents, boxProgress, frenzyTimer, hasSeenSynergyTutorial, hasSeenCardTutorial, cardDust, ghostBoxData: { ...ghostBoxData } };
     localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
 }
 
@@ -29,8 +31,11 @@ function loadGame() {
             nextCardId = data.nextCardId || 1;
             frenzyTimer = data.frenzyTimer || 0;
             hasSeenSynergyTutorial = data.hasSeenSynergyTutorial || false;
+            hasSeenCardTutorial = data.hasSeenCardTutorial || false;
             cardDust = data.cardDust || 0;
-            if (data.ghostBoxData) ghostBoxData = { ...ghostBoxData, ...data.ghostBoxData };
+            if (data.ghostBoxData) {
+                ghostBoxData = { ...ghostBoxData, ...data.ghostBoxData };
+            }
             if (data.cards) {
                 cards = data.cards;
                 cards.forEach(c => { if(c.level === undefined) c.level = 0; });
@@ -48,7 +53,7 @@ function loadGame() {
             if (data.boxProgress) {
                 data.boxProgress.forEach((savedBox, i) => {
                     if (boxData[i]) {
-                        const fieldsToLoad = ['active', 'jumps', 'prestige', 'inc', 'incCost', 'dur', 'durCost', 'auto', 'autoProgress', 'autoCost'];
+                        const fieldsToLoad = ['active', 'jumps', 'prestige', 'inc', 'incCost', 'dur', 'durCost', 'auto', 'autoProgress', 'autoCost', 'collapsed'];
                         fieldsToLoad.forEach(field => {
                             if (savedBox[field] !== undefined) boxData[i][field] = savedBox[field];
                         });

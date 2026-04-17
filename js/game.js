@@ -179,7 +179,7 @@ function gameLoop(currentTime) {
             jumpGhost();
             ghostBoxData.progress %= 1;
         }
-        const ghostFill = document.getElementById('ghost-fill');
+        const ghostFill = ghostBoxData.collapsed ? document.getElementById('ghost-fill-mini') : document.getElementById('ghost-fill');
         if (ghostFill) ghostFill.style.width = `${ghostBoxData.progress * 100}%`;
     }
 
@@ -351,23 +351,39 @@ function prestigeBox(idx) {
 
 function buyUp(idx, type) {
     const b = boxData[idx];
-    if (type === 'inc' && money >= b.incCost) {
-        money -= b.incCost;
-        b.inc += b.baseInc;
-        b.incCost = Math.round(b.incCost * 1.6);
-    } else if (type === 'dur' && money >= b.durCost && b.dur > b.minDur) {
-        money -= b.durCost;
-        b.dur = Math.max(b.minDur, b.dur - b.durStep);
-        b.durCost = Math.round(b.durCost * 2.5);
-    } else if (type === 'auto' && money >= b.autoCost && (b.auto === 0 || b.auto > b.minAuto)) {
-        money -= b.autoCost;
-        if (b.auto === 0) {
-            b.auto = b.baseAutoStart;
-            b.autoProgress = 0;
+    const btn = type === 'inc' ? b.cachedElements.upIncBtn : (type === 'dur' ? b.cachedElements.upDurBtn : b.cachedElements.upAutoBtn);
+
+    if (type === 'inc') {
+        if (money >= b.incCost) {
+            money -= b.incCost;
+            b.inc += b.baseInc;
+            b.incCost = Math.round(b.incCost * 1.6);
         } else {
-            b.auto = Math.max(b.minAuto, b.auto - b.autoStep);
+            flashError(btn);
         }
-        b.autoCost = Math.round(b.autoCost * 2.2);
+    } else if (type === 'dur') {
+        const isMaxDur = b.dur <= b.minDur;
+        if (money >= b.durCost && !isMaxDur) {
+            money -= b.durCost;
+            b.dur = Math.max(b.minDur, b.dur - b.durStep);
+            b.durCost = Math.round(b.durCost * 2.5);
+        } else {
+            flashError(btn);
+        }
+    } else if (type === 'auto') {
+        const isMaxAuto = b.auto > 0 && b.auto <= b.minAuto;
+        if (money >= b.autoCost && !isMaxAuto) {
+            money -= b.autoCost;
+            if (b.auto === 0) {
+                b.auto = b.baseAutoStart;
+                b.autoProgress = 0;
+            } else {
+                b.auto = Math.max(b.minAuto, b.auto - b.autoStep);
+            }
+            b.autoCost = Math.round(b.autoCost * 2.2);
+        } else {
+            flashError(btn);
+        }
     }
     updateUI();
 }
@@ -380,10 +396,12 @@ function unlockBox(idx) {
         renderLayout();
         updateUI();
         saveGame();
+    } else {
+        flashError(b.cachedElements.unlockCol);
     }
 }
 
-function getGhostBoxInterval() {
+function scrapCard(cardId) {
     return 3000 / (1 + ghostBoxData.levelSpeed * 0.25); // Faster jump
 }
 function getGhostBoxValueMult() {
@@ -405,11 +423,14 @@ function unlockGhostBox() {
         renderLayout();
         updateUI();
         saveGame();
+    } else {
+        flashError(ghostBoxData.cachedElements.unlockCol);
     }
 }
 
 function buyGhostUp(type) {
     const cost = getGhostUpCost(type);
+    const btn = document.getElementById(`up-ghost-${type}`);
     if (money >= cost) {
         money -= cost;
         if (type === 'speed') ghostBoxData.levelSpeed++;
@@ -417,6 +438,8 @@ function buyGhostUp(type) {
         if (type === 'synergy') ghostBoxData.levelSynergy++;
         updateUI();
         saveGame();
+    } else {
+        flashError(btn);
     }
 }
 

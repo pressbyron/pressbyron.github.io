@@ -205,8 +205,9 @@
                     <button class="btn-tactile top-btn settings-btn" onclick="toggleModal('settings-modal')">
                         <span class="icon-circle" style="background:var(--border); font-size:1rem;">⚙</span>
                     </button>
-                    <button class="btn-tactile top-btn shop-btn" onclick="toggleModal('shop-modal')">
-                        Card Shop
+                    <button class="btn-tactile top-btn shop-btn" onclick="toggleModal('shop-modal')" style="position: relative; overflow: hidden;">
+                        <div class="auto-fill" id="card-shop-fill" style="background: rgba(255,255,255,0.1);"></div>
+                        <span style="position: relative; z-index: 1;">Card Shop</span>
                     </button>
                 </div>
 
@@ -256,6 +257,21 @@
             <a href="#" onclick="showLegal('privacy'); return false;">Privacy Policy</a>
             <button class="btn-tactile accept-btn" onclick="acceptCookies()">Accept</button>
         </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="card-tutorial-modal" onclick="if(event.target.id === 'card-tutorial-modal') dismissCardTutorial()">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <div class="modal-header" style="justify-content: center; border-bottom: none; margin-bottom: 0;">
+            <h2 style="color: var(--accent-0);">New Cards Available!</h2>
+            <button class="close-btn" style="position: absolute; right: 20px; top: 20px;" onclick="dismissCardTutorial()">✕</button>
+        </div>
+        <p style="font-weight: 600; font-size: 1.1rem; color: var(--text);">You can now afford your first Card!</p>
+        <p style="color: var(--text-dim); line-height: 1.5;">Cards provide <strong>powerful permanent boosts</strong> to your boxes. Visit the shop to draw one, then equip it to a box to start earning more!</p>
+        <div class="modal-alert" style="border-color: var(--accent-0); background: rgba(59, 130, 246, 0.1); color: var(--text);">
+            Check the Card Shop button's progress bar to see when you can buy more!
+        </div>
+        <button class="btn-tactile draw-btn" style="background: var(--accent-0); color: white; border-color: #1d4ed8; box-shadow: 0 6px 0 #1e3a8a; margin-bottom: 0; width: 100%;" onclick="dismissCardTutorial()">Let's Shop!</button>
     </div>
 </div>
 
