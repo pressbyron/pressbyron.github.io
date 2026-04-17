@@ -96,25 +96,75 @@ function startDrawAnimation() {
     }, 80);
 }
 
-function finishDrawAnimation(newCard) {
+function finishDrawAnimation(newCard, isBoosted = false) {
     const showcase = document.getElementById('card-showcase');
     showcase.innerHTML = `
-        <div class="equip-card-item ${newCard.rarity} rolling-card pop-anim">
-            <div class="card-rarity">${newCard.rarity}</div>
-            <div class="card-stat">${newCard.text}</div>
-            <div class="card-desc">${newCard.typeName}</div>
-        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+            <div class="equip-card-item ${newCard.rarity} rolling-card pop-anim">
+                <div class="card-rarity">${newCard.rarity}</div>
+                <div class="card-stat">${newCard.text}</div>
+                <div class="card-desc">${newCard.typeName}</div>
+            </div>
+            <div style="display: flex; gap: 10px; width: 100%; max-width: 250px; margin-top: 15px;">
+                <button id="boost-btn" class="btn-tactile draw-btn ${isBoosted ? 'disabled-btn' : ''}" style="background:var(--synergy); color:white; border:none; flex: 1; margin:0; font-size: 0.6rem; padding: 8px 4px; box-shadow: 0 4px 0 #0e7490;" onclick="boostCurrentCard()" ${isBoosted ? 'disabled' : ''}>
+                    ${isBoosted ? 'Boosted!' : 'Watch Ad (+10-45%)'}
+                </button>
+                <button id="collect-btn" class="btn-tactile draw-btn" style="background:var(--money-green); color:black; border:none; flex: 1; margin:0; font-size: 0.6rem; padding: 8px 4px; box-shadow: 0 4px 0 #15803d;" onclick="collectCard()">
+                    Collect
+                </button>
+            </div>        </div>
     `;
 
     if (newCard.rarity === 'rare' || newCard.rarity === 'epic') {
         spawnParticles(showcase, newCard.rarity);
     }
-
-    setTimeout(() => {
-        document.getElementById('collect-btn').style.display = 'block';
-    }, 600);
 }
 
+function boostCurrentCard() {
+    if (!pendingDrawnCard) return;
+    
+    // Disable boost button immediately upon click
+    const btn = document.getElementById('boost-btn');
+    if (btn) {
+        if (btn.classList.contains('disabled-btn')) return; 
+        btn.classList.add('disabled-btn');
+        btn.disabled = true;
+        btn.innerText = "Watching Ad...";
+    }
+    
+    // Animate boost text on the card itself
+    let ticks = 0;
+    const interval = setInterval(() => {
+        ticks++;
+        const randVal = Math.floor(pendingDrawnCard.value * (1 + (Math.random() * 0.5)));
+        const statEl = document.querySelector('.card-stat');
+        if (statEl) statEl.innerText = "+" + randVal + (pendingDrawnCard.type === 'value' ? '%' : (pendingDrawnCard.type === 'synergy' ? 'x' : '%'));
+        
+        if (ticks >= 15) clearInterval(interval);
+    }, 100);
+
+    loadAndShowAd(() => {
+        clearInterval(interval);
+        // Boost between 10% and 45% (1.10x to 1.45x)
+        const boostMultiplier = 1 + (Math.floor(Math.random() * 36) + 10) / 100;
+        
+        // Ensure new value is at least slightly higher than original
+        pendingDrawnCard.value = Math.max(pendingDrawnCard.value + 0.01, pendingDrawnCard.value * boostMultiplier);
+        
+        // Round to 2 decimals for display consistency, or keep as integer for others
+        if (pendingDrawnCard.type === 'synergy') {
+            pendingDrawnCard.value = parseFloat(pendingDrawnCard.value.toFixed(2));
+        } else {
+            pendingDrawnCard.value = Math.floor(pendingDrawnCard.value);
+        }
+        
+        pendingDrawnCard.text = cardTypes.find(c => c.id === pendingDrawnCard.type).format.replace('{val}', pendingDrawnCard.value);
+        
+        // Refresh display with boosted state
+        finishDrawAnimation(pendingDrawnCard, true);
+        showSynergyFeedback(`✨ BOOSTED! ✨`, "var(--synergy)");
+    });
+}
 function collectCard() {
     if(!pendingDrawnCard) return;
 
