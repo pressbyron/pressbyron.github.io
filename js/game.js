@@ -137,6 +137,11 @@ function init() {
     requestAnimationFrame(gameLoop);
 
     setInterval(saveGame, 10000);
+    setInterval(() => {
+        if (typeof gtag === 'function') {
+            gtag('event', 'user_engagement', { 'event_category': 'session', 'event_label': 'playing_active' });
+        }
+    }, 60000); // 1 minute heartbeat
     window.addEventListener('beforeunload', () => {
         if(!isWiping) saveGame();
     });
