@@ -57,7 +57,7 @@ function catchGoldenRunner(runnerEl) {
 
         const box = document.createElement('div');
         box.className = 'golden-frenzy-box';
-        
+
         container.appendChild(box);
         stage.appendChild(container);
         frenzyBoxes.push(box);
@@ -73,13 +73,13 @@ function catchGoldenRunner(runnerEl) {
             frenzyBoxes.forEach((box, i) => {
                 // Random delay for EVERY jump to keep them offset
                 const delay = Math.random() * 400;
-                
+
                 setTimeout(() => {
                     if (!box.parentElement) return;
-                    
+
                     // Add is-jumping class which triggers the jumpKey animation
                     box.classList.add('is-jumping');
-                    
+
                     money += rewardPerBox;
 
                     // Create a temporary wrapper to mimic regular box structure for positioning
@@ -98,9 +98,9 @@ function catchGoldenRunner(runnerEl) {
                     floatEl.className = 'float-text';
                     floatEl.style.color = 'var(--high-jump)';
                     floatEl.innerText = `+$${rewardPerBox.toLocaleString()}`;
-                    
+
                     tempWrapper.appendChild(floatEl);
-                    
+
                     setTimeout(() => {
                         box.classList.remove('is-jumping');
                         floatEl.remove();
@@ -154,7 +154,7 @@ function gameLoop(currentTime) {
     // Frenzy Spawner Logic
     const baseFrenzyCooldown = 150000; // 2.5 mins
     const currentFrenzyCooldown = baseFrenzyCooldown / (1 + talents.frenzyFinder.level * 0.25);
-    
+
     frenzyTimer += dt;
     if (frenzyTimer >= currentFrenzyCooldown) {
         spawnGoldenRunner();
@@ -224,7 +224,7 @@ function jump(idx) {
     // Mutual Synergy logic: check previous jumps for adjacency and timing
     activeJumps.forEach(tj => {
         let isAdjacent = Math.abs(idx - tj.idx) === 1;
-        
+
         // Special Case: Box 0 can synergy with Ghost
         if (idx === 0 && tj.idx === 'ghost') {
             const now = Date.now();
@@ -239,7 +239,7 @@ function jump(idx) {
             // Give bonus to the PREVIOUS box if it hasn't received a synergy bonus for this jump yet
             if (!tj.hadSynergy) {
                 tj.hadSynergy = true;
-                
+
                 if (tj.idx === 'ghost') {
                     // Ghost was the first jumper
                     ghostBoxData.lastSynergyTime = Date.now();
@@ -310,11 +310,11 @@ function jump(idx) {
     const actualJumpSpeed = b.dur / cardMults.speed;
 
     el.style.setProperty('--duration', actualJumpSpeed + 's');
-    
+
     // Remove both in case the previous jump had a different type
     el.classList.remove('jump-anim', 'high-jump-anim', 'is-jumping');
     void el.offsetWidth; // Trigger reflow
-    
+
     el.classList.add(animClass, 'is-jumping');
 
     createFloatingText(idx, amountEarned, isSynergyFound, isHighJump);
@@ -469,16 +469,16 @@ function jumpGhost() {
     if (now - ghostBoxData.lastSynergyTime >= synergyCooldown) {
         const lastJump = [...activeJumps].reverse().find(tj => tj.idx === 0);
         const synergyWindow = 50 + (talents.synergy.level * 25) + 25; // 25ms extra slack by default for ghost!
-        
+
         if (lastJump && Math.abs(now - lastJump.time) < synergyWindow) {
             ghostBoxData.lastSynergyTime = now;
             isSynergyFound = true;
-            
+
             // Ghost bonus
             const synBonus = 2; // Fixed x2 for ghost
             const extra = amount * (synBonus - 1);
             money += extra;
-            
+
             // Box 1 bonus
             if (!lastJump.hadSynergy) {
                 lastJump.hadSynergy = true;
@@ -487,7 +487,7 @@ function jumpGhost() {
                 const b1Extra = Math.floor(lastJump.amountNoSynergy * (b1SynBonus - 1));
                 money += b1Extra;
                 createFloatingText(0, b1Extra, true, false);
-                
+
                 const b1El = boxData[0].cachedElements.box;
                 if (b1El) {
                     b1El.classList.add('synergy-glow');

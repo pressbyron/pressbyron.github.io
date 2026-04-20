@@ -147,7 +147,14 @@ body {
     border: 2px solid #b45309; box-shadow: 0 4px 0 #78350f;
     padding: 10px 16px;
 }
-.talent-btn:active { box-shadow: 0 0px 0 #78350f; }
+.talent-btn.can-afford {
+    animation: talentPulse 2s infinite;
+}
+
+@keyframes talentPulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 4px 0 #78350f; }
+    50% { transform: scale(1.05); box-shadow: 0 4px 20px rgba(253, 230, 138, 0.4); }
+}
 
 .header p {
     color: var(--text-dim);
@@ -336,8 +343,8 @@ body {
 }
 
 .jumps-counter {
-    position: relative; text-align: center; font-size: 0.8rem; font-family: var(--font-mono); color: var(--text-dim); 
-    margin-bottom: 5px; padding: 8px; border-radius: 8px; background: rgba(0,0,0,0.2); 
+    position: relative; text-align: center; font-size: 0.8rem; font-family: var(--font-mono); color: var(--text-dim);
+    margin-bottom: 5px; padding: 8px; border-radius: 8px; background: rgba(0,0,0,0.2);
     border: 1px solid var(--border); user-select: none; transition: 0.2s; overflow: hidden;
 }
 .jumps-counter-fill {
@@ -349,7 +356,7 @@ body {
 .prestige-ready { background: #4a044e; color: #f0abfc; border-color: var(--synergy); cursor: pointer; box-shadow: inset 0 0 15px rgba(217, 70, 239, 0.2); animation: pulseGlow 1.5s infinite; }
 .prestige-ready:hover { background: #701a75; transform: scale(1.02); }
 @keyframes pulseGlow { 0% { box-shadow: inset 0 0 10px rgba(217,70,239,0.2); } 50% { box-shadow: inset 0 0 25px rgba(217,70,239,0.6); } 100% { box-shadow: inset 0 0 10px rgba(217,70,239,0.2); } }
-.prestige-badge { background: var(--synergy); color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+.prestige-badge { background: var(--synergy); color: white; padding: 2px 4px; border-radius: 4px; font-size: 0.65rem; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,0.5); display: inline-block; max-width: 45px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle; }
 
 /* Card Badge */
 .card-badge {
@@ -392,8 +399,8 @@ body {
 .auto-fill { position: absolute; top: 0; left: 0; bottom: 0; background-color: rgba(255,255,255,0.05); z-index: 0; pointer-events: none; width: 0%; border-right: 2px solid var(--text-dim); }
 .up-btn-content { position: relative; z-index: 1; padding: 12px; pointer-events: none; display: flex; flex-direction: column; gap: 4px; }
 
-.unlock-col { 
-    position: relative; justify-content: center; align-items: center; border: 2px dashed var(--border); 
+.unlock-col {
+    position: relative; justify-content: center; align-items: center; border: 2px dashed var(--border);
     background: rgba(0,0,0,0.2); cursor: pointer; color: var(--text-dim); transition: all 0.2s; overflow: hidden;
 }
 .unlock-col:hover { border-color: var(--text); color: var(--text); background: var(--bg); }
@@ -675,14 +682,14 @@ body {
 @media (max-width: 600px) {
     .page-wrapper { gap: 20px; }
     .about-section { padding: 10px 0 40px 0; }
-    
-    .header { 
-        display: flex; 
-        flex-direction: column; 
+
+    .header {
+        display: flex;
+        flex-direction: column;
         gap: 15px;
         padding-top: 0;
     }
-    
+
     .action-bar {
         justify-content: center;
         gap: 6px;
@@ -699,12 +706,12 @@ body {
         white-space: nowrap;
     }
 
-    .top-left-actions { 
+    .top-left-actions {
         display: flex;
         gap: 6px;
-        width: auto; 
+        width: auto;
     }
-    
+
     .icon-circle {
         width: 18px;
         height: 18px;
@@ -717,7 +724,7 @@ body {
     }
 
     .header h1 { font-size: 2.5rem; }
-    
+
     .stage { gap: 10px; height: 160px; }
     .box { width: 50px; height: 50px; }
     .box-wrapper { width: 50px; }

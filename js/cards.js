@@ -105,11 +105,18 @@ function finishDrawAnimation(newCard, isBoosted = false) {
                 <div class="card-stat">${newCard.text}</div>
                 <div class="card-desc">${newCard.typeName}</div>
             </div>
+            <!--
             <div style="display: flex; gap: 10px; width: 100%; max-width: 250px; margin-top: 15px;">
                 <button id="boost-btn" class="btn-tactile draw-btn ${isBoosted ? 'disabled-btn' : ''}" style="background:var(--synergy); color:white; border:none; flex: 1; margin:0; font-size: 0.6rem; padding: 8px 4px; box-shadow: 0 4px 0 #0e7490;" onclick="boostCurrentCard()" ${isBoosted ? 'disabled' : ''}>
                     ${isBoosted ? 'Boosted!' : 'Watch Ad (+10-45%)'}
                 </button>
                 <button id="collect-btn" class="btn-tactile draw-btn" style="background:var(--money-green); color:black; border:none; flex: 1; margin:0; font-size: 0.6rem; padding: 8px 4px; box-shadow: 0 4px 0 #15803d;" onclick="collectCard()">
+                    Collect
+                </button>
+            </div>
+            -->
+            <div style="display: flex; gap: 10px; width: 100%; max-width: 250px; margin-top: 15px;">
+                <button id="collect-btn" class="btn-tactile draw-btn" style="background:var(--money-green); color:black; border:none; flex: 1; margin:0; font-size: 0.8rem; padding: 10px 4px; box-shadow: 0 4px 0 #15803d;" onclick="collectCard()">
                     Collect
                 </button>
             </div>        </div>
@@ -342,10 +349,10 @@ function updateCachedMultipliers(idx) {
     if (b.equippedCard) {
         const c = b.equippedCard;
         const lvl = c.level || 0;
-        if (c.type === 'value') m.value += (c.value / 100) + (lvl * 0.05);
-        if (c.type === 'speed') m.speed += (c.value / 100) + (lvl * 0.05);
-        if (c.type === 'auto') m.auto += (c.value / 100) + (lvl * 0.05);
-        if (c.type === 'synergy') m.synergyBonus += c.value + (lvl * 0.2);
+        if (c.type === 'value') m.value += (c.value / 100) + (lvl * 0.15); // Increased from 0.05
+        if (c.type === 'speed') m.speed += (c.value / 100) + (lvl * 0.10); // Increased from 0.05
+        if (c.type === 'auto') m.auto += (c.value / 100) + (lvl * 0.10); // Increased from 0.05
+        if (c.type === 'synergy') m.synergyBonus += c.value + (lvl * 0.5); // Increased from 0.2
     }
     b.cachedMults = m;
 }
@@ -438,8 +445,8 @@ function openUpgradeModal(cardId) {
     document.getElementById('upgrade-dust-cost').innerText = cost;
     document.getElementById('upgrade-cost-text').innerText = `Cost: ${cost} Dust`;
     
-    let bonusText = "+5% Bonus";
-    if (card.type === 'synergy') bonusText = "+0.2x Bonus";
+    let bonusText = "+15% Bonus";
+    if (card.type === 'synergy') bonusText = "+0.5x Bonus";
     document.getElementById('upgrade-info').innerText = `Next Level: Lvl ${card.level + 1} (${bonusText})`;
 
     const btn = document.getElementById('confirm-upgrade-btn');

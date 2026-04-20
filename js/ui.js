@@ -362,6 +362,13 @@ function updateUI() {
     const btnTokensEl = document.getElementById('btn-tokens');
     if (btnTokensEl) btnTokensEl.innerText = prestigeTokens;
     
+    // Talent button pulse
+    const talentBtn = document.querySelector('.talent-btn');
+    if (talentBtn) {
+        if (prestigeTokens > 0) talentBtn.classList.add('can-afford');
+        else talentBtn.classList.remove('can-afford');
+    }
+    
     // Card Shop Progress
     const cardShopFill = document.getElementById('card-shop-fill');
     if (cardShopFill) {
@@ -427,7 +434,7 @@ function updateUI() {
             const elapsed = now - ghostBoxData.lastSynergyTime;
             const pct = Math.min(100, (elapsed / cooldown) * 100);
             syncFill.style.width = `${pct}%`;
-            syncText.innerText = pct >= 100 ? "✨ SYNERGY READY ✨" : "Synergy: Cooldown";
+            syncText.innerText = pct >= 100 ? "SYNERGY READY" : "Synergy: Cooldown";
             
             const gEl = document.getElementById('ghost-box');
             if (gEl) {
@@ -485,8 +492,8 @@ function updateUI() {
                     ce.jumpContainer.className = "jumps-counter prestige-ready";
                     ce.jumpContainer.onclick = () => openPrestigeModal(i);
                 }
-                if (ce.jumpText && ce.jumpText.innerHTML !== `🌟 PRESTIGE READY! 🌟`) {
-                    ce.jumpText.innerHTML = `🌟 PRESTIGE READY! 🌟`;
+                if (ce.jumpText && ce.jumpText.innerHTML !== `PRESTIGE READY`) {
+                    ce.jumpText.innerHTML = `PRESTIGE READY`;
                 }
                 if (ce.jumpFill) ce.jumpFill.style.width = "0%";
             } else {
