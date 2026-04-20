@@ -465,6 +465,25 @@ function confirmUpgrade() {
 
     cardDust -= cost;
     card.level += 1;
+    
+    // Update the card text
+    const baseVal = card.value; // Keep track of base if needed, or recalculate from scratch
+    // Note: card.value isn't actually being updated by level in the current structure, 
+    // it's just stored as a static value. Let's update the text based on card type and level.
+    const typeObj = cardTypes.find(c => c.id === card.type);
+    
+    // Calculate new stat based on card type logic (simplified)
+    let bonus = 0;
+    if (card.type === 'value') bonus = 0.15;
+    else if (card.type === 'speed' || card.type === 'auto') bonus = 0.10;
+    else if (card.type === 'synergy') bonus = 0.5;
+    
+    const newVal = card.type === 'synergy' 
+        ? parseFloat((card.value + bonus).toFixed(2)) 
+        : Math.floor(card.value * (1 + bonus));
+    
+    card.value = newVal;
+    card.text = typeObj.format.replace('{val}', card.value);
 
     if (card.equippedTo !== null) {
         updateCachedMultipliers(card.equippedTo);

@@ -2,13 +2,7 @@ const legalContent = {
     privacy: {
         title: "Privacy Policy",
         content: `
-            <p>At <strong>idlepolyjump.com</strong>, we value your privacy. This policy outlines how we handle data.</p>
-            <h3>1. Personal Data</h3>
-            <p>We do not collect any personally identifiable information (PII) such as your name, email, or address. We do not require account registration.</p>
-            <h3>2. LocalStorage</h3>
-            <p>We use your browser's <strong>LocalStorage</strong> to save your game progress, currency, and settings. This data remains on your device and is not sent to our servers.</p>
-            <h3>3. External Links</h3>
-            <p>Our site may contain links to other websites. We are not responsible for the privacy practices of those sites.</p>
+            <p>You can view our full Privacy Policy at <a href="privacy.html" target="_blank" style="color:var(--accent-0);">idlepolyjump.com/privacy</a>.</p>
         `
     },
     cookies: {
@@ -16,13 +10,13 @@ const legalContent = {
         content: `
             <p>This policy explains how <strong>idlepolyjump.com</strong> uses cookies and similar technologies.</p>
             <h3>1. What are Cookies?</h3>
-            <p>Cookies are small text files stored on your device. While we don't use traditional server-side cookies for the game itself, we use <strong>LocalStorage</strong> (which functions similarly) to store your game state.</p>
+            <p>Cookies are small text files stored on your device. We use <strong>LocalStorage</strong> to store your game state.</p>
             <h3>2. Why do we use them?</h3>
             <ul>
                 <li><strong>Functional:</strong> Necessary for the game to function (saving your progress).</li>
             </ul>
             <h3>3. Controlling your data</h3>
-            <p>You can clear your browser's cookies and LocalStorage at any time via your browser settings. Note that clearing LocalStorage will reset all game progress.</p>
+            <p>You can clear your browser's LocalStorage at any time via your browser settings. Note that clearing LocalStorage will reset all game progress.</p>
         `
     }
 };
@@ -41,20 +35,3 @@ function showLegal(type) {
         toggleModal('legal-modal');
     }
 }
-
-function acceptCookies() {
-    localStorage.setItem('polyJump_cookieConsent', 'true');
-    const banner = document.getElementById('cookie-banner');
-    if (banner) banner.classList.remove('active');
-}
-
-// Check for consent on load
-window.addEventListener('DOMContentLoaded', () => {
-    const consent = localStorage.getItem('polyJump_cookieConsent');
-    if (!consent) {
-        setTimeout(() => {
-            const banner = document.getElementById('cookie-banner');
-            if (banner) banner.classList.add('active');
-        }, 1000);
-    }
-});

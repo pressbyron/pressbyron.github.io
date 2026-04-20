@@ -630,48 +630,6 @@ body {
 .legal-body ul { padding-left: 20px; }
 .legal-body li { margin-bottom: 8px; }
 
-/* Cookie Banner */
-.cookie-banner {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: var(--panel);
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    width: 320px;
-    padding: 15px;
-    z-index: 2000;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    display: none;
-    animation: slideInUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-.cookie-banner.active { display: block; }
-@keyframes slideInUp {
-    from { transform: translateY(100px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
-}
-.cookie-banner-content p {
-    color: var(--text-dim);
-    font-size: 0.8rem;
-    line-height: 1.4;
-    margin: 0 0 12px 0;
-}
-.cookie-banner-actions {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.cookie-banner-actions a {
-    color: var(--accent-0);
-    font-size: 0.75rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    text-decoration: none;
-}
-.cookie-banner-actions a:hover { text-decoration: underline; }
-.accept-btn {
-    background: var(--synergy);
-    color: white;
     border: none;
     padding: 6px 16px;
     font-size: 0.75rem;

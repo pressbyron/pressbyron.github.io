@@ -346,6 +346,12 @@ function prestigeBox(idx) {
 
         updateCachedMultipliers(idx);
         showSynergyFeedback(`🌟 ${b.name} PRESTIGED! +1 PT 🌟`, b.color);
+        
+        // Track Prestige
+        if (typeof gtag === 'function') {
+            gtag('event', 'prestige', { 'box_name': b.name, 'prestige_level': b.prestige });
+        }
+
         renderLayout();
         updateUI();
         saveGame();
@@ -398,6 +404,12 @@ function unlockBox(idx) {
     if (money >= b.unlockCost) {
         money -= b.unlockCost;
         b.active = true;
+        
+        // Track Unlocks
+        if (typeof gtag === 'function') {
+            gtag('event', 'unlock_box', { 'box_name': b.name });
+        }
+
         renderLayout();
         updateUI();
         saveGame();
@@ -509,6 +521,8 @@ function jumpGhost() {
 }
 
 document.addEventListener('keydown', function(event) {
+    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') return;
+
     if (event.key === 'm' || event.key === 'M') {
         money += 100000;
         updateUI();
