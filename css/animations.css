@@ -1,0 +1,27 @@
+/* --- Synergy Punch --- */
+@keyframes synergyPunch {
+    0%   { box-shadow: 0 0 0px 0px var(--glow-color, var(--synergy)), inset 0 0 0px 0px var(--glow-color, var(--synergy)); }
+    20%  { box-shadow: 0 0 50px 20px var(--glow-color, var(--synergy)), inset 0 0 25px 8px var(--glow-color, var(--synergy)); }
+    55%  { box-shadow: 0 0 30px 8px var(--glow-color, var(--synergy)), inset 0 0 10px 2px var(--glow-color, var(--synergy)); }
+    100% { box-shadow: 0 0 0px 0px var(--glow-color, var(--synergy)), inset 0 0 0px 0px var(--glow-color, var(--synergy)); }
+}
+
+/* --- Tactile Visuals: Rotation + Squish/Scale --- */
+.jump-anim { animation: jumpKey var(--duration, 0.6s) cubic-bezier(0.25, 0.1, 0.25, 1.0) forwards; }
+@keyframes jumpKey {
+    0% { transform: translateY(0) scale(1, 1) rotate(var(--rot-start, 0deg)) translateZ(0); }
+    15% { transform: translateY(5px) scale(1.1, 0.9) rotate(var(--rot-start, 0deg)) translateZ(0); }
+    45% { transform: translateY(-70px) scale(0.95, 1.05) rotate(var(--rot-peak, 90deg)) translateZ(0); }
+    85% { transform: translateY(0) scale(1.1, 0.9) rotate(var(--rot-end, 90deg)) translateZ(0); }
+    100% { transform: translateY(0) scale(1, 1) rotate(var(--rot-end, 90deg)) translateZ(0); }
+}
+
+/* --- High Jump Animation --- */
+.high-jump-anim { animation: highJumpKey var(--duration, 0.6s) cubic-bezier(0.25, 0.1, 0.25, 1.0) forwards; }
+@keyframes highJumpKey {
+    0% { transform: translateY(0) scale(1, 1) rotate(var(--rot-start, 0deg)) translateZ(0); }
+    15% { transform: translateY(10px) scale(1.2, 0.8) rotate(var(--rot-start, 0deg)) translateZ(0); }
+    45% { transform: translateY(-120px) scale(0.9, 1.1) rotate(var(--rot-peak, 180deg)) translateZ(0); }
+    85% { transform: translateY(0) scale(1.2, 0.8) rotate(var(--rot-end, 180deg)) translateZ(0); }
+    100% { transform: translateY(0) scale(1, 1) rotate(var(--rot-end, 180deg)) translateZ(0); }
+}

@@ -1,3 +1,6 @@
+// ============================================================
+// MODALS
+// ============================================================
 function toggleModal(id) {
     if(typeof isDrawingCard !== 'undefined' && isDrawingCard && id === 'shop-modal') return;
 
@@ -5,7 +8,6 @@ function toggleModal(id) {
     if (!modal) return;
     
     if (modal.classList.contains('active')) {
-        // If closing the shop modal while a card is drawn but not collected, collect it automatically
         if (id === 'shop-modal' && typeof pendingDrawnCard !== 'undefined' && pendingDrawnCard) {
             collectCard();
         }
@@ -52,7 +54,7 @@ function dismissCardTutorial() {
 }
 
 function confirmPrestige() {
-    if(pendingPrestigeBox !== null) {
+    if(typeof pendingPrestigeBox !== 'undefined' && pendingPrestigeBox !== null) {
         prestigeBox(pendingPrestigeBox);
         pendingPrestigeBox = null;
     }
@@ -60,23 +62,29 @@ function confirmPrestige() {
 }
 
 function spawnParticles(container, rarity) {
-    const color = rarity === 'epic' ? '#d8b4fe' : (rarity === 'rare' ? '#93c5fd' : '#facc15');
-    for(let i=0; i<40; i++) {
+    const palette = rarity === 'epic'
+        ? ['#d8b4fe', '#c084fc', '#a855f7', '#e879f9']
+        : rarity === 'rare'
+        ? ['#93c5fd', '#60a5fa', '#3b82f6', '#38bdf8']
+        : ['#facc15', '#fbbf24', '#f59e0b', '#fde047'];
+
+    for (let i = 0; i < 50; i++) {
         const p = document.createElement('div');
         p.className = 'particle';
-        p.style.color = color;
+        const color = palette[Math.floor(Math.random() * palette.length)];
         p.style.background = color;
+        p.style.color = color;
 
         const angle = Math.random() * Math.PI * 2;
-        const velocity = 60 + Math.random() * 100;
-        const tx = Math.cos(angle) * velocity;
-        const ty = Math.sin(angle) * velocity;
-
-        p.style.setProperty('--tx', `${tx}px`);
-        p.style.setProperty('--ty', `${ty}px`);
+        const velocity = 80 + Math.random() * 150;
+        p.style.setProperty('--tx', `${Math.cos(angle) * velocity}px`);
+        p.style.setProperty('--ty', `${Math.sin(angle) * velocity}px`);
+        p.style.setProperty('--size', `${3 + Math.random() * 10}px`);
+        p.style.setProperty('--dur', `${0.55 + Math.random() * 0.55}s`);
+        p.style.setProperty('--delay', `${Math.random() * 0.1}s`);
 
         container.appendChild(p);
-        setTimeout(() => p.remove(), 1000);
+        setTimeout(() => p.remove(), 1300);
     }
 }
 
@@ -109,14 +117,12 @@ function renderLayout() {
     const upgrades = document.getElementById('upgrades-container');
     if (!stage || !upgrades) return;
 
-    // Rensa bara vanliga box-wrappers när vi uppdaterar layouten (inte frenzy-boxar om de snurrar)
     const existingWrappers = stage.querySelectorAll('.box-wrapper');
     existingWrappers.forEach(w => w.remove());
 
     upgrades.innerHTML = '';
-    lastMoney = -1; // Force updateUI to refresh all labels after layout change
+    lastMoney = -1;
 
-    // Add Ghost Box to Stage
     if (ghostBoxData.active) {
         const ghostWrapper = document.createElement('div');
         ghostWrapper.className = 'box-wrapper';
@@ -125,12 +131,11 @@ function renderLayout() {
         stage.appendChild(ghostWrapper);
     }
 
-    // Add Ghost Upgrade Column
     const ghostCol = document.createElement('div');
     ghostCol.className = 'upgrade-col';
-    ghostCol.style.borderTopColor = '#64748b'; // Gray
+    ghostCol.style.borderTopColor = '#64748b';
     
-    ghostBoxData.cachedElements = {}; // Clear previous cache
+    ghostBoxData.cachedElements = {};
     
     if (!ghostBoxData.active) {
         ghostCol.className = 'upgrade-col unlock-col';
@@ -189,13 +194,20 @@ function renderLayout() {
             const wrapper = document.createElement('div');
             wrapper.className = 'box-wrapper';
             wrapper.id = `wrapper-${idx}`;
-            wrapper.innerHTML = `<div class="box" id="box-${idx}" style="background:${b.color}" onclick="jump(${idx})"></div>`;
+            
+            const evolutionClass = b.evolution ? `evolution-${b.evolution}` : '';
+            wrapper.innerHTML = `
+                <div class="box box-${idx} ${evolutionClass}" id="box-${idx}" onclick="jump(${idx})">
+                    <img src="images/face_${String.fromCharCode(97 + idx)}.png" class="box-face">
+                </div>
+            `;
             stage.appendChild(wrapper);
 
             const col = document.createElement('div');
             col.className = 'upgrade-col';
             col.style.borderTopColor = b.color;
             const badgeHtml = b.prestige > 0 ? `<div class="prestige-badge">P${b.prestige}</div>` : '';
+            const evolutionBadgeHtml = b.evolution > 0 ? `<div class="prestige-badge" style="background:var(--accent-1); margin-left:4px;">E${b.evolution}</div>` : '';
 
             let cardBadgeHtml = `<div class="card-badge" onclick="openEquipModal(${idx})">+ Card</div>`;
             if(b.equippedCard) {
@@ -209,13 +221,13 @@ function renderLayout() {
                 cardBadgeHtml = `<div class="card-badge filled ${c.rarity}" onclick="openEquipModal(${idx})">${shortText}</div>`;
             }
 
-            b.cachedElements = {}; // Clear cache when layout changes
+            b.cachedElements = {};
 
             col.innerHTML = `
                 ${cardBadgeHtml}
                 <div class="col-header" style="color:${b.color}">
                     <button class="collapse-toggle" onclick="toggleBoxCollapse(${idx})" style="margin-right: 8px;">${b.collapsed ? '▼' : '▲'}</button>
-                    <span style="flex:1;">${b.name} ${badgeHtml}</span>
+                    <span style="flex:1;">${b.name} ${badgeHtml}${evolutionBadgeHtml}</span>
                 </div>
                 <div id="jump-count-${idx}" class="jumps-counter">
                     <div class="jumps-counter-fill" id="jump-fill-${idx}"></div>
@@ -236,6 +248,9 @@ function renderLayout() {
                             <div id="up-auto-title-${idx}">Auto-Bot</div>
                             <div id="up-auto-cost-${idx}">OFF</div>
                         </div>
+                        <div id="auto-toggle-${idx}" class="auto-toggle-pill" onclick="event.stopPropagation(); toggleAutoBot(${idx})" style="display:none;">
+                            <span id="auto-toggle-label-${idx}">ON</span>
+                        </div>
                     </button>
                 </div>
                 ${b.collapsed ? `
@@ -243,10 +258,12 @@ function renderLayout() {
                         <div class="auto-fill" id="auto-fill-mini-${idx}"></div>
                     </div>
                 ` : ''}
+                <div style="text-align:center;">
+                    <button onclick="openStats(${idx})" style="background:none; border:none; color:var(--text-dim); font-size:0.6rem; cursor:pointer; font-family:var(--font-ui); font-weight:800; text-transform:uppercase; letter-spacing:1px; padding:2px 4px; opacity:0.4;">Stats</button>
+                </div>
             `;
             upgrades.appendChild(col);
             
-            // Cache elements
             b.cachedElements.box = document.getElementById(`box-${idx}`);
             b.cachedElements.jumpContainer = document.getElementById(`jump-count-${idx}`);
             b.cachedElements.jumpFill = document.getElementById(`jump-fill-${idx}`);
@@ -259,6 +276,8 @@ function renderLayout() {
             b.cachedElements.upAutoBtn = document.getElementById(`up-auto-${idx}`);
             b.cachedElements.upAutoCost = document.getElementById(`up-auto-cost-${idx}`);
             b.cachedElements.autoFill = b.collapsed ? document.getElementById(`auto-fill-mini-${idx}`) : document.getElementById(`auto-fill-${idx}`);
+            b.cachedElements.autoToggleBtn = document.getElementById(`auto-toggle-${idx}`);
+            b.cachedElements.autoToggleLabel = document.getElementById(`auto-toggle-label-${idx}`);
             b.cachedElements.wrapper = document.getElementById(`wrapper-${idx}`);
         } else {
             const prevBox = boxData[idx-1];
@@ -287,7 +306,6 @@ function createFloatingText(idx, amount, isSynergy, isHighJump) {
     const wrapper = idx === 'ghost' ? document.getElementById('wrapper-ghost') : document.getElementById(`wrapper-${idx}`);
     if (!wrapper) return;
 
-    // If it's a synergy addition, try to update the most recent text for this box
     const existing = wrapper.lastElementChild;
     const isRecent = existing && (Date.now() - parseInt(existing.dataset.time || 0) < 500);
 
@@ -340,9 +358,35 @@ function showSynergyFeedback(text, color) {
 function flashError(el) {
     if (!el) return;
     el.classList.remove('error-flash');
-    void el.offsetWidth; // trigger reflow
+    void el.offsetWidth; 
     el.classList.add('error-flash');
     setTimeout(() => el.classList.remove('error-flash'), 400);
+}
+
+function openStats(idx) {
+    activeStatsIdx = idx;
+    const b = boxData[idx];
+    const statsBoxName = document.getElementById('stats-box-name');
+    if (statsBoxName) {
+        statsBoxName.innerText = `${b.name} Statistics`;
+        statsBoxName.style.color = b.color;
+    }
+    
+    const totalLifetimeIncome = boxData.reduce((sum, box) => sum + (box.totalIncome || 0), 0);
+    const percent = totalLifetimeIncome > 0 ? ((b.totalIncome / totalLifetimeIncome) * 100).toFixed(1) : 0;
+
+    const statsContent = document.getElementById('stats-content');
+    if (statsContent) {
+        statsContent.innerHTML = `
+            <div class="stat-row"><span>Total Jumps</span><strong id="stat-jumps">${b.jumps.toLocaleString()}</strong></div>
+            <div class="stat-row"><span>Times Prestiged</span><strong id="stat-prestige">${b.prestige.toLocaleString()}</strong></div>
+            <div class="stat-row"><span>Total Income</span><strong style="color:var(--money-green)">$<span id="stat-income">${(b.totalIncome || 0).toLocaleString()}</span></strong></div>
+            <div class="stat-row"><span>Income Share</span><strong id="stat-percent">${percent}%</strong></div>
+            <div class="stat-row"><span>Best Single Jump</span><strong style="color:var(--synergy)">$<span id="stat-best">${(b.bestJump || 0).toLocaleString()}</span></strong></div>
+        `;
+    }
+    
+    toggleModal('stats-modal');
 }
 
 function updateUI() {
@@ -362,21 +406,18 @@ function updateUI() {
     const btnTokensEl = document.getElementById('btn-tokens');
     if (btnTokensEl) btnTokensEl.innerText = prestigeTokens;
     
-    // Talent button pulse
     const talentBtn = document.querySelector('.talent-btn');
     if (talentBtn) {
         if (prestigeTokens > 0) talentBtn.classList.add('can-afford');
         else talentBtn.classList.remove('can-afford');
     }
     
-    // Card Shop Progress
     const cardShopFill = document.getElementById('card-shop-fill');
     if (cardShopFill) {
         const cost = typeof getActualCardCost === 'function' ? getActualCardCost() : 1000;
         const pct = Math.min(100, (money / cost) * 100);
         cardShopFill.style.width = `${pct}%`;
         
-        // One-time tutorial trigger
         if (money >= cost && typeof hasSeenCardTutorial !== 'undefined' && !hasSeenCardTutorial) {
             hasSeenCardTutorial = true;
             setTimeout(() => {
@@ -389,19 +430,20 @@ function updateUI() {
     const dustDisplay = document.getElementById('card-dust-display');
     if (dustDisplay) dustDisplay.innerText = cardDust;
 
-    // Shop modal specific update
     const shopModal = document.getElementById('shop-modal');
     if (shopModal && shopModal.classList.contains('active')) {
-        const btn = document.getElementById('draw-card-btn');
+        const btn = document.getElementById('card-action-btn');
         const actualCost = typeof getActualCardCost === 'function' ? getActualCardCost() : 0;
-        if (btn && typeof isDrawingCard !== 'undefined' && !isDrawingCard) {
-            if (money < actualCost) btn.classList.add('disabled-btn');
-            else btn.classList.remove('disabled-btn');
-            btn.innerHTML = `Draw Card <span style="color:var(--bg); font-family:var(--font-mono); font-size:1rem; margin-left:5px;">$${actualCost.toLocaleString()}</span>`;
+        if (btn && typeof isDrawingCard !== 'undefined' && !isDrawingCard && typeof pendingDrawnCard !== 'undefined' && !pendingDrawnCard) {
+            const targetedType = typeof selectedTargetType !== 'undefined' ? selectedTargetType : null;
+            const displayCost = targetedType ? actualCost * 3 : actualCost;
+            const canAfford = money >= displayCost;
+            btn.disabled = !canAfford;
+            if (!canAfford) btn.classList.add('disabled-btn'); else btn.classList.remove('disabled-btn');
+            btn.innerHTML = `Draw Card <span style="color:var(--bg); font-family:var(--font-mono); font-size:1rem; margin-left:5px;">$${displayCost.toLocaleString()}</span>`;
         }
     }
     
-    // Upgrade modal specific update
     const upgradeModal = document.getElementById('upgrade-modal');
     if (upgradeModal && upgradeModal.classList.contains('active') && typeof upgradingCardId !== 'undefined' && upgradingCardId !== null) {
         const card = cards.find(c => c.id === upgradingCardId);
@@ -410,6 +452,25 @@ function updateUI() {
             const btn = document.getElementById('confirm-upgrade-btn');
             if (btn) btn.disabled = cardDust < cost;
         }
+    }
+
+    const statsModal = document.getElementById('stats-modal');
+    if (statsModal && statsModal.classList.contains('active') && activeStatsIdx !== null) {
+        const b = boxData[activeStatsIdx];
+        const totalLifetimeIncome = boxData.reduce((sum, box) => sum + (box.totalIncome || 0), 0);
+        const percent = totalLifetimeIncome > 0 ? ((b.totalIncome / totalLifetimeIncome) * 100).toFixed(1) : 0;
+        
+        const statJumps = document.getElementById('stat-jumps');
+        const statPrestige = document.getElementById('stat-prestige');
+        const statIncome = document.getElementById('stat-income');
+        const statPercent = document.getElementById('stat-percent');
+        const statBest = document.getElementById('stat-best');
+
+        if (statJumps) statJumps.innerText = b.jumps.toLocaleString();
+        if (statPrestige) statPrestige.innerText = b.prestige.toLocaleString();
+        if (statIncome) statIncome.innerText = (b.totalIncome || 0).toLocaleString();
+        if (statPercent) statPercent.innerText = percent + '%';
+        if (statBest) statBest.innerText = (b.bestJump || 0).toLocaleString();
     }
 
     if (!ghostBoxData.active) {
@@ -425,7 +486,6 @@ function updateUI() {
             }
         }
     } else {
-        // Synergy progress
         const syncFill = document.getElementById('ghost-sync-fill');
         const syncText = document.getElementById('ghost-sync-text');
         if (syncFill && syncText) {
@@ -448,22 +508,53 @@ function updateUI() {
             const cost = getGhostUpCost('speed');
             if (money < cost) upSpeed.classList.add('disabled-btn');
             else upSpeed.classList.remove('disabled-btn');
-            document.getElementById('cost-ghost-speed').innerHTML = `$${cost.toLocaleString()} <span style="color:var(--text-dim); font-size:0.7rem;">| ${(getGhostBoxInterval()/1000).toFixed(1)}s</span>`;
+            const costGhostSpeed = document.getElementById('cost-ghost-speed');
+            if (costGhostSpeed) costGhostSpeed.innerHTML = `$${cost.toLocaleString()} <span style="color:var(--text-dim); font-size:0.7rem;">| ${(getGhostBoxInterval()/1000).toFixed(1)}s</span>`;
         }
         const upValue = document.getElementById('up-ghost-value');
         if (upValue) {
             const cost = getGhostUpCost('value');
             if (money < cost) upValue.classList.add('disabled-btn');
             else upValue.classList.remove('disabled-btn');
-            document.getElementById('cost-ghost-value').innerHTML = `$${cost.toLocaleString()} <span style="color:var(--text-dim); font-size:0.7rem;">| ${(getGhostBoxValueMult()*100).toFixed(0)}%</span>`;
+            const costGhostValue = document.getElementById('cost-ghost-value');
+            if (costGhostValue) costGhostValue.innerHTML = `$${cost.toLocaleString()} <span style="color:var(--text-dim); font-size:0.7rem;">| ${(getGhostBoxValueMult()*100).toFixed(0)}%</span>`;
         }
         const upSync = document.getElementById('up-ghost-synergy');
         if (upSync) {
             const cost = getGhostUpCost('synergy');
             if (money < cost) upSync.classList.add('disabled-btn');
             else upSync.classList.remove('disabled-btn');
-            document.getElementById('cost-ghost-synergy').innerHTML = `$${cost.toLocaleString()} <span style="color:var(--text-dim); font-size:0.7rem;">| ${(getGhostBoxSynergyCooldown()/1000).toFixed(1)}s</span>`;
+            const costGhostSynergy = document.getElementById('cost-ghost-synergy');
+            if (costGhostSynergy) costGhostSynergy.innerHTML = `$${cost.toLocaleString()} <span style="color:var(--text-dim); font-size:0.7rem;">| ${(getGhostBoxSynergyCooldown()/1000).toFixed(1)}s</span>`;
         }
+    }
+
+    // Chain bar
+    const chainFill = document.getElementById('chain-bar-fill');
+    const chainDecay = document.getElementById('chain-bar-decay');
+    const chainLabel = document.getElementById('chain-bar-label');
+    const chainContainer = document.getElementById('chain-bar-container');
+    if (chainFill && chainDecay && chainContainer) {
+        const chainNow = Date.now();
+        const chainLevel = Math.floor(synergyChainRaw);
+        const chainPct = Math.min(synergyChainRaw / CHAIN_MAX, 1) * 100;
+        const timeLeft = synergyChainRaw > 0
+            ? Math.max(0, 1 - (chainNow - synergyChainLastTime) / CHAIN_DECAY_MS)
+            : 0;
+        chainFill.style.height = chainPct + '%';
+        chainDecay.style.height = (timeLeft * chainPct) + '%';
+        if (chainLabel) {
+            chainLabel.textContent = chainLevel >= 1
+                ? `×${(1 + chainLevel * 0.25).toFixed(2)}`
+                : '⛓';
+        }
+        let chainColor, chainGlow;
+        if (chainLevel >= 9)      { chainColor = '#ca8a04'; chainGlow = '#facc15'; }
+        else if (chainLevel >= 6) { chainColor = '#c2410c'; chainGlow = '#f97316'; }
+        else if (chainLevel >= 3) { chainColor = '#7c3aed'; chainGlow = '#c084fc'; }
+        else                      { chainColor = '#1d4ed8'; chainGlow = '#60a5fa'; }
+        chainContainer.style.setProperty('--chain-color', chainColor);
+        chainContainer.style.setProperty('--chain-glow', chainGlow);
     }
 
     boxData.forEach((b, i) => {
@@ -487,7 +578,17 @@ function updateUI() {
         const targetJumps = getPrestigeTarget(b.prestige);
 
         if (ce.jumpContainer) {
-            if (b.jumps >= targetJumps) {
+            if (b.prestige >= 10) {
+                if (!ce.jumpContainer.classList.contains('prestige-ready')) {
+                    ce.jumpContainer.className = "jumps-counter prestige-ready";
+                    ce.jumpContainer.onclick = () => evolveBox(i);
+                }
+                if (ce.jumpText && ce.jumpText.innerHTML !== `EVOLVE`) {
+                    ce.jumpText.innerHTML = `EVOLVE`;
+                }
+                if (ce.jumpFill) ce.jumpFill.style.width = "0%";
+            } 
+            else if (b.jumps >= targetJumps) {
                 if (!ce.jumpContainer.classList.contains('prestige-ready')) {
                     ce.jumpContainer.className = "jumps-counter prestige-ready";
                     ce.jumpContainer.onclick = () => openPrestigeModal(i);
@@ -512,25 +613,23 @@ function updateUI() {
             }
         }
 
-        // Only update buttons and texts if money changed or once per frame
         if (moneyChanged) {
             const cardMults = b.cachedMults;
             const talentValueMult = 1 + (talents.globalValue.level * 0.15);
             const prestigeMult = Math.pow(1.5, b.prestige);
 
-            // Inc button
             if (ce.upIncBtn) {
                 if (money < b.incCost) ce.upIncBtn.classList.add('disabled-btn');
                 else ce.upIncBtn.classList.remove('disabled-btn');
                 
-                const currentTotalValue = Math.floor(b.inc * prestigeMult * cardMults.value * talentValueMult);
-                const upgradeIncrease = Math.floor(b.baseInc * prestigeMult * cardMults.value * talentValueMult);
+                const evolutionMult = Math.pow(25, b.evolution || 0);
+                const currentTotalValue = Math.floor(b.inc * prestigeMult * evolutionMult * cardMults.value * talentValueMult);
+                const upgradeIncrease = Math.floor(b.baseInc * prestigeMult * evolutionMult * cardMults.value * talentValueMult);
                 
                 if (ce.upIncTitle) ce.upIncTitle.innerText = `Value (+$${currentTotalValue.toLocaleString()})`;
                 if (ce.upIncCost) ce.upIncCost.innerHTML = `$${b.incCost.toLocaleString()} <span style="color:var(--text-dim); font-size:0.7rem;">| +$${upgradeIncrease.toLocaleString()}</span>`;
             }
 
-            // Dur button
             if (ce.upDurBtn) {
                 const isMaxDur = b.dur <= b.minDur;
                 if (money < b.durCost || isMaxDur) ce.upDurBtn.classList.add('disabled-btn');
@@ -543,17 +642,29 @@ function updateUI() {
                 }
             }
 
-            // Auto button
             if (ce.upAutoBtn) {
                 const isMaxAuto = b.auto > 0 && b.auto <= b.minAuto;
                 if (money < b.autoCost || isMaxAuto) ce.upAutoBtn.classList.add('disabled-btn');
                 else ce.upAutoBtn.classList.remove('disabled-btn');
-                
+
                 const displayAuto = b.auto / cardMults.auto;
                 if (ce.upAutoCost) {
                     if (isMaxAuto && cardMults.auto === 1) ce.upAutoCost.innerText = 'MAX SPEED';
                     else ce.upAutoCost.innerHTML = `$${b.autoCost.toLocaleString()} <span style="color:var(--text-dim); font-size:0.7rem;">| ${b.auto === 0 ? 'OFF' : (displayAuto/1000).toFixed(2)+'s'}</span>`;
                 }
+            }
+
+        }
+
+        if (ce.autoToggleBtn) {
+            const showToggle = talents.autoControl.level > 0 && b.auto > 0;
+            ce.autoToggleBtn.style.display = showToggle ? '' : 'none';
+            if (showToggle && ce.autoToggleLabel) {
+                const on = b.autoEnabled !== false;
+                ce.autoToggleBtn.style.background = on ? 'rgba(74,222,128,0.2)' : 'rgba(255,255,255,0.06)';
+                ce.autoToggleBtn.style.borderColor = on ? '#16a34a' : 'var(--border)';
+                ce.autoToggleLabel.textContent = on ? 'ON' : 'OFF';
+                ce.autoToggleLabel.style.color = on ? '#4ade80' : 'var(--text-dim)';
             }
         }
     });

@@ -6,18 +6,19 @@ let cards = [];
 let frenzyTimer = 0;
 let hasSeenSynergyTutorial = false;
 let hasSeenCardTutorial = false;
-let isWiping = false;
+let pitySinceLastRare = 0;
+let pitySinceLastEpic = 0;
 
 function saveGame() {
     if (isWiping) return;
     const boxProgress = boxData.map(b => ({
-        active: b.active, jumps: b.jumps, prestige: b.prestige, equippedCard: b.equippedCard,
+        active: b.active, jumps: b.jumps, prestige: b.prestige, evolution: b.evolution, totalIncome: b.totalIncome, bestJump: b.bestJump, equippedCard: b.equippedCard,
         inc: b.inc, incCost: b.incCost, dur: b.dur, durCost: b.durCost,
         auto: b.auto, autoProgress: b.autoProgress, autoCost: b.autoCost,
-        collapsed: b.collapsed
+        collapsed: b.collapsed, rotation: b.rotation, autoEnabled: b.autoEnabled
     }));
 
-    const saveData = { money, prestigeTokens, nextCardId, cards, talents, boxProgress, frenzyTimer, hasSeenSynergyTutorial, hasSeenCardTutorial, cardDust, ghostBoxData: { ...ghostBoxData } };
+    const saveData = { money, prestigeTokens, nextCardId, cards, talents, boxProgress, frenzyTimer, hasSeenSynergyTutorial, hasSeenCardTutorial, cardDust, ghostBoxData: { ...ghostBoxData }, pitySinceLastRare, pitySinceLastEpic };
     localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
 }
 
@@ -33,6 +34,8 @@ function loadGame() {
             hasSeenSynergyTutorial = data.hasSeenSynergyTutorial || false;
             hasSeenCardTutorial = data.hasSeenCardTutorial || false;
             cardDust = data.cardDust || 0;
+            pitySinceLastRare = data.pitySinceLastRare || 0;
+            pitySinceLastEpic = data.pitySinceLastEpic || 0;
             if (data.ghostBoxData) {
                 ghostBoxData = { ...ghostBoxData, ...data.ghostBoxData };
             }
@@ -53,7 +56,7 @@ function loadGame() {
             if (data.boxProgress) {
                 data.boxProgress.forEach((savedBox, i) => {
                     if (boxData[i]) {
-                        const fieldsToLoad = ['active', 'jumps', 'prestige', 'inc', 'incCost', 'dur', 'durCost', 'auto', 'autoProgress', 'autoCost', 'collapsed'];
+                        const fieldsToLoad = ['active', 'jumps', 'prestige', 'evolution', 'totalIncome', 'bestJump', 'inc', 'incCost', 'dur', 'durCost', 'auto', 'autoProgress', 'autoCost', 'collapsed', 'rotation', 'autoEnabled'];
                         fieldsToLoad.forEach(field => {
                             if (savedBox[field] !== undefined) boxData[i][field] = savedBox[field];
                         });
@@ -72,6 +75,7 @@ function loadGame() {
                         }
 
                         boxData[i].autoProgress = 0;
+                        if (boxData[i].rotation === undefined) boxData[i].rotation = 0;
                         updateCachedMultipliers(i);
                     }
                 });

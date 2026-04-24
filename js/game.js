@@ -1,18 +1,36 @@
+// ============================================================
+// STATE
+// ============================================================
 let activeJumps = [];
 let lastTime = performance.now();
 let pendingPrestigeBox = null;
 let lastMoney = -1;
+let activeStatsIdx = null;
+let isWiping = false;
 
-function getPrestigeTarget(prestigeLevel) { return Math.floor(1000 * Math.pow(1.1, prestigeLevel)); }
-// --- FRENZY EVENT LOGIC ---
+let synergyChainRaw = 0;
+let synergyChainLastTime = 0;
+const CHAIN_DECAY_MS = 1500;
+const CHAIN_MAX = 10;
+const CHAIN_AUTO_WEIGHT = 0.3;
 
-// --- FRENZY EVENT LOGIC ---
+// ============================================================
+// VALUE HELPERS
+// ============================================================
+function getPrestigeTarget(prestigeLevel) {
+    return Math.floor(1000 * Math.pow(1.1, prestigeLevel));
+}
+
+// ============================================================
+// GOLDEN FRENZY EVENT
+// ============================================================
 function getSingleBoxValue(b) {
     if (!b.active) return 0;
     const cardMults = getCardMultipliers(b);
     const talentValueMult = 1 + (talents.globalValue.level * 0.15);
     const prestigeMult = Math.pow(1.5, b.prestige);
-    return Math.floor(b.inc * prestigeMult * cardMults.value * talentValueMult);
+    const evolutionMult = Math.pow(25, b.evolution || 0);
+    return Math.floor(b.inc * prestigeMult * evolutionMult * cardMults.value * talentValueMult);
 }
 
 function getTotalBoxValue() {
@@ -49,10 +67,13 @@ function catchGoldenRunner(runnerEl) {
     const numBoxes = Math.floor(Math.random() * 3) + 4; // 4 to 6
     const frenzyBoxes = [];
 
+    const slotWidth = 80 / numBoxes;
     for(let i=0; i<numBoxes; i++) {
         const container = document.createElement('div');
         container.className = 'golden-frenzy-box-container';
-        container.style.left = (10 + Math.random() * 80) + '%';
+        const slotCenter = 10 + i * slotWidth + slotWidth * 0.5;
+        const jitter = (Math.random() - 0.5) * slotWidth * 0.5;
+        container.style.left = Math.max(5, Math.min(92, slotCenter + jitter)) + '%';
         container.style.bottom = (10 + Math.random() * 30) + 'px';
 
         const box = document.createElement('div');
@@ -63,26 +84,28 @@ function catchGoldenRunner(runnerEl) {
         frenzyBoxes.push(box);
     }
 
-    // Wait for dropIn animation (0.8s) before starting jumps
     setTimeout(() => {
-        let jumps = 0;
+        let jumpsCount = 0;
         const frenzyInterval = setInterval(() => {
             const totalVal = getTotalBoxValue();
             const rewardPerBox = totalVal > 0 ? Math.max(10, Math.floor(totalVal * 0.10)) : 10;
 
             frenzyBoxes.forEach((box, i) => {
-                // Random delay for EVERY jump to keep them offset
                 const delay = Math.random() * 400;
 
                 setTimeout(() => {
                     if (!box.parentElement) return;
 
-                    // Add is-jumping class which triggers the jumpKey animation
-                    box.classList.add('is-jumping');
+                    const fStartRot = parseFloat(box.dataset.rotation || '0');
+                    const fEndRot = fStartRot + 90;
+                    box.dataset.rotation = fEndRot;
+                    box.style.setProperty('--rot-start', fStartRot + 'deg');
+                    box.style.setProperty('--rot-peak', (fStartRot + 45) + 'deg');
+                    box.style.setProperty('--rot-end', fEndRot + 'deg');
 
+                    box.classList.add('is-jumping');
                     money += rewardPerBox;
 
-                    // Create a temporary wrapper to mimic regular box structure for positioning
                     const tempWrapper = document.createElement('div');
                     tempWrapper.className = 'box-wrapper';
                     tempWrapper.style.position = 'absolute';
@@ -103,22 +126,24 @@ function catchGoldenRunner(runnerEl) {
 
                     setTimeout(() => {
                         box.classList.remove('is-jumping');
+                        box.style.transform = `rotate(${fEndRot}deg)`;
                         floatEl.remove();
                         tempWrapper.remove();
-                    }, 600); // Duration matches jump duration
+                    }, 600);
                 }, delay);
             });
 
             updateUI();
 
-            jumps++;
-            if(jumps >= 10) {
+            jumpsCount++;
+            if(jumpsCount >= 10) {
                 clearInterval(frenzyInterval);
                 setTimeout(() => {
                     frenzyBoxes.forEach(b => {
                         if (b.parentElement) {
+                            b.style.opacity = '0';
                             spawnParticles(b.parentElement, 'golden');
-                            setTimeout(() => b.parentElement.remove(), 100);
+                            setTimeout(() => b.parentElement.remove(), 1400);
                         }
                     });
                 }, 1200);
@@ -126,7 +151,11 @@ function catchGoldenRunner(runnerEl) {
         }, 1000);
     }, 800);
 }
-// ---------------------------------
+
+// --- INITIALIZATION ---
+document.addEventListener('DOMContentLoaded', () => {
+    init();
+});
 
 function init() {
     loadGame();
@@ -141,7 +170,7 @@ function init() {
         if (typeof gtag === 'function') {
             gtag('event', 'user_engagement', { 'event_category': 'session', 'event_label': 'playing_active' });
         }
-    }, 60000); // 1 minute heartbeat
+    }, 60000);
     window.addEventListener('beforeunload', () => {
         if(!isWiping) saveGame();
     });
@@ -151,8 +180,7 @@ function gameLoop(currentTime) {
     const dt = currentTime - lastTime;
     lastTime = currentTime;
 
-    // Frenzy Spawner Logic
-    const baseFrenzyCooldown = 150000; // 2.5 mins
+    const baseFrenzyCooldown = 150000;
     const currentFrenzyCooldown = baseFrenzyCooldown / (1 + talents.frenzyFinder.level * 0.25);
 
     frenzyTimer += dt;
@@ -162,12 +190,12 @@ function gameLoop(currentTime) {
     }
 
     boxData.forEach((b, idx) => {
-        if (b.active && b.auto > 0) {
+        if (b.active && b.auto > 0 && b.autoEnabled !== false) {
             const actualAutoSpeed = b.auto / b.cachedMults.auto;
             b.autoProgress += dt / actualAutoSpeed;
 
             if (b.autoProgress >= 1) {
-                jump(idx);
+                jump(idx, true);
                 b.autoProgress %= 1;
             }
 
@@ -188,15 +216,21 @@ function gameLoop(currentTime) {
         if (ghostFill) ghostFill.style.width = `${ghostBoxData.progress * 100}%`;
     }
 
-    updateUI();
+    if (synergyChainRaw > 0 && Date.now() - synergyChainLastTime > CHAIN_DECAY_MS) {
+        synergyChainRaw = 0;
+    }
 
+    updateUI();
     requestAnimationFrame(gameLoop);
 }
 
-function getTalentCost(key) { return Math.floor(talents[key].baseCost * Math.pow(talents[key].costMult, talents[key].level)); }
+function getTalentCost(key) { 
+    return Math.floor(talents[key].baseCost * Math.pow(talents[key].costMult, talents[key].level)); 
+}
 
 function buyTalent(key) {
-    const t = talents[key]; const cost = getTalentCost(key);
+    const t = talents[key]; 
+    const cost = getTalentCost(key);
     if (prestigeTokens >= cost && t.level < t.maxLevel) {
         prestigeTokens -= cost;
         t.level += 1;
@@ -206,7 +240,14 @@ function buyTalent(key) {
     }
 }
 
-function jump(idx) {
+function toggleAutoBot(idx) {
+    const b = boxData[idx];
+    b.autoEnabled = !b.autoEnabled;
+    if (!b.autoEnabled) b.autoProgress = 0;
+    saveGame();
+}
+
+function jump(idx, isAuto) {
     const b = boxData[idx];
     const el = document.getElementById(`box-${idx}`);
     if (!el || el.classList.contains('is-jumping')) return;
@@ -215,19 +256,17 @@ function jump(idx) {
     const cardMults = getCardMultipliers(b);
     const talentValueMult = 1 + (talents.globalValue.level * 0.15);
     const prestigeMult = Math.pow(1.5, b.prestige);
+    const evolutionMult = Math.pow(25, b.evolution || 0);
 
     let multiplier = 1;
     let isSynergyFound = false;
 
     const synergyWindow = 50 + (talents.synergy.level * 25);
 
-    // Mutual Synergy logic: check previous jumps for adjacency and timing
     activeJumps.forEach(tj => {
         let isAdjacent = Math.abs(idx - tj.idx) === 1;
 
-        // Special Case: Box 0 can synergy with Ghost
         if (idx === 0 && tj.idx === 'ghost') {
-            const now = Date.now();
             if (now - ghostBoxData.lastSynergyTime >= getGhostBoxSynergyCooldown()) {
                 isAdjacent = true;
             }
@@ -236,21 +275,21 @@ function jump(idx) {
         if (Math.abs(now - tj.time) < (idx === 0 && tj.idx === 'ghost' ? synergyWindow + 25 : synergyWindow) && isAdjacent) {
             isSynergyFound = true;
 
-            // Give bonus to the PREVIOUS box if it hasn't received a synergy bonus for this jump yet
             if (!tj.hadSynergy) {
                 tj.hadSynergy = true;
 
                 if (tj.idx === 'ghost') {
-                    // Ghost was the first jumper
                     ghostBoxData.lastSynergyTime = Date.now();
                     const synBonus = 2;
                     const extra = Math.floor(tj.amountNoSynergy * (synBonus - 1));
                     money += extra;
+                    
                     createFloatingText('ghost', extra, true, false);
                     const gEl = document.getElementById('ghost-box');
                     if (gEl) {
+                        gEl.style.setProperty('--glow-color', 'var(--synergy)');
                         gEl.classList.add('synergy-glow');
-                        setTimeout(() => gEl.classList.remove('synergy-glow'), 400);
+                        setTimeout(() => gEl.classList.remove('synergy-glow'), 550);
                     }
                 } else {
                     const prevBox = boxData[tj.idx];
@@ -259,12 +298,17 @@ function jump(idx) {
 
                     const extraAmount = Math.floor(tj.amountNoSynergy * (prevSynergyBonus - 1));
                     money += extraAmount;
+                    
+                    prevBox.totalIncome = (prevBox.totalIncome || 0) + extraAmount;
+                    if (extraAmount > (prevBox.bestJump || 0)) prevBox.bestJump = extraAmount;
+
                     createFloatingText(tj.idx, extraAmount, true, false);
 
                     const prevEl = document.getElementById(`box-${tj.idx}`);
                     if (prevEl) {
+                        prevEl.style.setProperty('--glow-color', prevBox.color);
                         prevEl.classList.add('synergy-glow');
-                        setTimeout(() => prevEl.classList.remove('synergy-glow'), 400);
+                        setTimeout(() => prevEl.classList.remove('synergy-glow'), 550);
                     }
                 }
             }
@@ -272,10 +316,15 @@ function jump(idx) {
     });
 
     if (isSynergyFound) {
-        multiplier *= (2 + cardMults.synergyBonus);
+        synergyChainRaw = Math.min(CHAIN_MAX, synergyChainRaw + (isAuto ? CHAIN_AUTO_WEIGHT : 1.0));
+        synergyChainLastTime = now;
+        const chainLevel = Math.floor(synergyChainRaw);
+        const chainMult = 1 + chainLevel * 0.25;
+        multiplier *= (2 + cardMults.synergyBonus) * chainMult;
         showSynergyFeedback(`✨ SYNERGY! x${2+cardMults.synergyBonus} BONUS ✨`, "var(--synergy)");
+        el.style.setProperty('--glow-color', b.color);
         el.classList.add('synergy-glow');
-        setTimeout(() => el.classList.remove('synergy-glow'), 400);
+        setTimeout(() => el.classList.remove('synergy-glow'), 550);
 
         if (!hasSeenSynergyTutorial) {
             hasSeenSynergyTutorial = true;
@@ -295,11 +344,13 @@ function jump(idx) {
         }
     }
 
-    const amountEarned = Math.floor(b.inc * prestigeMult * multiplier * cardMults.value * talentValueMult);
+    const amountEarned = Math.floor(b.inc * prestigeMult * evolutionMult * multiplier * cardMults.value * talentValueMult);
     money += amountEarned;
 
-    // Save this jump so future jumps can synergy with it
-    const amountNoSynergy = Math.floor(b.inc * prestigeMult * (isHighJump ? 2 : 1) * cardMults.value * talentValueMult);
+    b.totalIncome = (b.totalIncome || 0) + amountEarned;
+    if (amountEarned > (b.bestJump || 0)) b.bestJump = amountEarned;
+
+    const amountNoSynergy = Math.floor(b.inc * prestigeMult * evolutionMult * (isHighJump ? 2 : 1) * cardMults.value * talentValueMult);
     activeJumps.push({ time: now, idx: idx, amountNoSynergy: amountNoSynergy, hadSynergy: isSynergyFound });
     if (activeJumps.length > 20) activeJumps.shift();
 
@@ -308,19 +359,25 @@ function jump(idx) {
 
     const animClass = isHighJump ? 'high-jump-anim' : 'jump-anim';
     const actualJumpSpeed = b.dur / cardMults.speed;
-
+    const startRot = b.rotation || 0;
+    const endRot = startRot + (isHighJump ? 180 : 90);
+    
     el.style.setProperty('--duration', actualJumpSpeed + 's');
+    el.style.setProperty('--rot-start', `${startRot}deg`);
+    el.style.setProperty('--rot-peak', `${(startRot + endRot) / 2}deg`);
+    el.style.setProperty('--rot-end', `${endRot}deg`);
+    
+    b.rotation = endRot;
 
-    // Remove both in case the previous jump had a different type
     el.classList.remove('jump-anim', 'high-jump-anim', 'is-jumping');
-    void el.offsetWidth; // Trigger reflow
-
+    void el.offsetWidth;
     el.classList.add(animClass, 'is-jumping');
 
     createFloatingText(idx, amountEarned, isSynergyFound, isHighJump);
 
     setTimeout(() => {
         el.classList.remove(animClass, 'is-jumping');
+        el.style.transform = `rotate(${endRot}deg)`;
     }, actualJumpSpeed * 1000);
 }
 
@@ -347,7 +404,6 @@ function prestigeBox(idx) {
         updateCachedMultipliers(idx);
         showSynergyFeedback(`🌟 ${b.name} PRESTIGED! +1 PT 🌟`, b.color);
         
-        // Track Prestige
         if (typeof gtag === 'function') {
             gtag('event', 'prestige', { 'box_name': b.name, 'prestige_level': b.prestige });
         }
@@ -357,6 +413,59 @@ function prestigeBox(idx) {
         saveGame();
 
         if(document.getElementById('talent-modal').classList.contains('active')) renderTalents();
+    }
+}
+
+function evolveBox(idx) {
+    const b = boxData[idx];
+    if (b.prestige >= 10) {
+        const el = document.getElementById(`box-${idx}`);
+        if (el) {
+            el.classList.add('evolve-anim');
+            showSynergyFeedback(`💠 ${b.name} IS EVOLVING... 💠`, "var(--accent-1)");
+            
+            setTimeout(() => {
+                b.evolution = (b.evolution || 0) + 1;
+                b.prestige = 0;
+                b.jumps = 0;
+
+                b.inc = b.baseInc;
+                b.incCost = b.baseIncCost;
+                b.dur = b.baseDur;
+                b.durCost = b.baseDurCost;
+                b.auto = 0;
+                b.autoProgress = 0;
+                b.autoCost = b.baseAutoCost;
+
+                updateCachedMultipliers(idx);
+                showSynergyFeedback(`💠 ${b.name} EVOLVED TO E${b.evolution}! 💠`, "var(--accent-1)");
+                
+                renderLayout();
+                updateUI();
+                saveGame();
+
+                // Particle explosion after re-render so we have the new box
+                const newBoxEl = document.getElementById(`box-${idx}`);
+                if (newBoxEl) spawnParticles(newBoxEl.parentElement, 'epic');
+            }, 1500); // Wait for evolveGlow animation
+        } else {
+            // Fallback if element not found
+            b.evolution = (b.evolution || 0) + 1;
+            b.prestige = 0;
+            b.jumps = 0;
+            b.inc = b.baseInc;
+            b.incCost = b.baseIncCost;
+            b.dur = b.baseDur;
+            b.durCost = b.baseDurCost;
+            b.auto = 0;
+            b.autoProgress = 0;
+            b.autoCost = b.baseAutoCost;
+            updateCachedMultipliers(idx);
+            showSynergyFeedback(`💠 ${b.name} EVOLVED TO E${b.evolution}! 💠`, "var(--accent-1)");
+            renderLayout();
+            updateUI();
+            saveGame();
+        }
     }
 }
 
@@ -405,7 +514,6 @@ function unlockBox(idx) {
         money -= b.unlockCost;
         b.active = true;
         
-        // Track Unlocks
         if (typeof gtag === 'function') {
             gtag('event', 'unlock_box', { 'box_name': b.name });
         }
@@ -419,13 +527,13 @@ function unlockBox(idx) {
 }
 
 function getGhostBoxInterval() {
-    return 3000 / (1 + ghostBoxData.levelSpeed * 0.25); // Faster jump
+    return 3000 / (1 + ghostBoxData.levelSpeed * 0.25);
 }
 function getGhostBoxValueMult() {
-    return 0.01 + (ghostBoxData.levelValue * 0.01); // Higher percentage of total
+    return 0.1 + (ghostBoxData.levelValue * 0.025);
 }
 function getGhostBoxSynergyCooldown() {
-    return 5000 - (ghostBoxData.levelSynergy * 500); // More frequent synergy
+    return 5000 - (ghostBoxData.levelSynergy * 500);
 }
 function getGhostUpCost(type) {
     const levels = { 'speed': ghostBoxData.levelSpeed, 'value': ghostBoxData.levelValue, 'synergy': ghostBoxData.levelSynergy };
@@ -469,53 +577,64 @@ function jumpGhost() {
     const amount = Math.max(1, Math.floor(totalVal * getGhostBoxValueMult()));
     money += amount;
 
-    // Visual
+    const ghostStartRot = ghostBoxData.rotation || 0;
+    const ghostEndRot = ghostStartRot + 90;
+    ghostBoxData.rotation = ghostEndRot;
+    el.style.setProperty('--duration', '0.45s');
+    el.style.setProperty('--rot-start', ghostStartRot + 'deg');
+    el.style.setProperty('--rot-peak', (ghostStartRot + 45) + 'deg');
+    el.style.setProperty('--rot-end', ghostEndRot + 'deg');
+
     el.classList.remove('jump-anim');
     void el.offsetWidth;
     el.classList.add('jump-anim');
+    setTimeout(() => { el.classList.remove('jump-anim'); el.style.transform = `rotate(${ghostEndRot}deg)`; }, 450);
 
-    // Synergy with Box 1
     const now = Date.now();
     let isSynergyFound = false;
     const synergyCooldown = getGhostBoxSynergyCooldown();
     if (now - ghostBoxData.lastSynergyTime >= synergyCooldown) {
         const lastJump = [...activeJumps].reverse().find(tj => tj.idx === 0);
-        const synergyWindow = 50 + (talents.synergy.level * 25) + 25; // 25ms extra slack by default for ghost!
+        const synergyWindow = 50 + (talents.synergy.level * 25) + 25;
 
         if (lastJump && Math.abs(now - lastJump.time) < synergyWindow) {
             ghostBoxData.lastSynergyTime = now;
             isSynergyFound = true;
 
-            // Ghost bonus
-            const synBonus = 2; // Fixed x2 for ghost
+            const synBonus = 2;
             const extra = amount * (synBonus - 1);
             money += extra;
 
-            // Box 1 bonus
             if (!lastJump.hadSynergy) {
                 lastJump.hadSynergy = true;
                 const b1Mults = getCardMultipliers(boxData[0]);
                 const b1SynBonus = (2 + b1Mults.synergyBonus);
                 const b1Extra = Math.floor(lastJump.amountNoSynergy * (b1SynBonus - 1));
                 money += b1Extra;
+                
+                boxData[0].totalIncome = (boxData[0].totalIncome || 0) + b1Extra;
+                if (b1Extra > (boxData[0].bestJump || 0)) boxData[0].bestJump = b1Extra;
+
                 createFloatingText(0, b1Extra, true, false);
 
                 const b1El = boxData[0].cachedElements.box;
                 if (b1El) {
+                    b1El.style.setProperty('--glow-color', boxData[0].color);
                     b1El.classList.add('synergy-glow');
-                    setTimeout(() => b1El.classList.remove('synergy-glow'), 400);
+                    setTimeout(() => b1El.classList.remove('synergy-glow'), 550);
                 }
             }
 
+            synergyChainRaw = Math.min(CHAIN_MAX, synergyChainRaw + CHAIN_AUTO_WEIGHT);
+            synergyChainLastTime = now;
+            el.style.setProperty('--glow-color', 'var(--synergy)');
             el.classList.add('synergy-glow');
-            setTimeout(() => el.classList.remove('synergy-glow'), 400);
+            setTimeout(() => el.classList.remove('synergy-glow'), 550);
             showSynergyFeedback("✨ GHOST SYNERGY! ✨", "var(--synergy)");
         }
     }
 
     createFloatingText('ghost', amount, isSynergyFound, false);
-
-    // Save jump for future synergy (e.g. Box 0 jumping after Ghost)
     activeJumps.push({ time: now, idx: 'ghost', amountNoSynergy: amount, hadSynergy: isSynergyFound });
     if (activeJumps.length > 20) activeJumps.shift();
 }
@@ -544,5 +663,3 @@ document.addEventListener('keydown', function(event) {
         showSynergyFeedback("🛠️ DEV CHEAT: Golden Frenzy 🛠️", "var(--high-jump)");
     }
 });
-
-init();

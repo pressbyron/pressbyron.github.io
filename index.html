@@ -16,6 +16,7 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect x=%2210%22 y=%2210%22 width=%2280%22 height=%2280%22 rx=%2215%22 fill=%22%233b82f6%22/></svg>">
 
     <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/animations.css">
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2085876101170741"
             crossorigin="anonymous"></script>
     <!-- Google tag (gtag.js) -->
@@ -72,25 +73,67 @@
             <button class="close-btn" onclick="toggleModal('shop-modal')">✕</button>
         </div>
 
-        <div id="card-showcase-container">
-            <div id="card-showcase"></div>
-            <button id="collect-btn" class="btn-tactile draw-btn" style="display:none; background: var(--money-green); border-color: #15803d; box-shadow: 0 6px 0 #166534; color:#000; width: 200px; margin-bottom:0;" onclick="collectCard()">
-                COLLECT
-            </button>
+        <div id="card-showcase-zone">
+            <div class="card-flip-container">
+                <div class="card-flip-inner" id="card-flip-inner">
+                    <div class="card-flip-back">✦ ✦ ✦</div>
+                    <div class="card-flip-front" id="card-flip-front">
+                        <div class="card-rarity" id="card-flip-rarity"></div>
+                        <div class="card-stat" id="card-flip-stat"></div>
+                        <div class="card-desc" id="card-flip-desc"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="pity-display" style="text-align:center; font-size:0.65rem; color:var(--text-dim); font-family:var(--font-ui); text-transform:uppercase; letter-spacing:0.5px; min-height:1em;"></div>
+            <button class="btn-tactile draw-btn" id="card-action-btn" onclick="handleCardAction()">Draw Card</button>
         </div>
 
-        <button class="btn-tactile draw-btn" id="draw-card-btn" onclick="startDrawAnimation()">
-            Draw Card
-        </button>
+        <div class="shop-section">
+            <div class="shop-section-header">
+                <span class="shop-section-label">Targeted Draw</span>
+                <span style="color:var(--money-green); font-family:var(--font-mono); font-size:0.75rem;" id="targeted-draw-cost"></span>
+            </div>
+            <div class="shop-chips">
+                <div class="shop-chip" id="target-chip-value" onclick="toggleTargetChip('value')">Value</div>
+                <div class="shop-chip" id="target-chip-speed" onclick="toggleTargetChip('speed')">Speed</div>
+                <div class="shop-chip" id="target-chip-auto" onclick="toggleTargetChip('auto')">Auto</div>
+                <div class="shop-chip" id="target-chip-synergy" onclick="toggleTargetChip('synergy')">Synergy</div>
+            </div>
+        </div>
 
-        <h3 style="margin-top: 10px; border-top: 2px solid var(--border); padding-top: 20px; font-size: 1rem; color: var(--text-dim); text-transform: uppercase; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin-top: 15px; border-top: 2px solid var(--border); padding-top: 15px; font-size: 1rem; color: var(--text-dim); text-transform: uppercase; display: flex; justify-content: space-between; align-items: center;">
             <span>Inventory</span>
             <span style="color:var(--synergy); font-size:0.9rem;">✨ <span id="card-dust-display">0</span> DUST</span>
         </h3>
-        <div style="display: flex; gap: 5px; margin-bottom: 10px;">
-            <button class="card-action-btn scrap-btn" style="flex:1;" onclick="openBulkScrapModal('common')">Scrap All Common</button>
-            <button class="card-action-btn scrap-btn" style="flex:1;" onclick="openBulkScrapModal('rare')">Scrap All Rare</button>
-            <button class="card-action-btn scrap-btn" style="flex:1;" onclick="openBulkScrapModal('epic')">Scrap All Epic</button>
+
+        <div class="shop-section">
+            <div class="shop-section-header">
+                <span class="shop-section-label">Craft Common</span>
+                <span style="color:var(--synergy); font-size:0.7rem;">✨ 150 Dust</span>
+            </div>
+            <div class="shop-row-actions">
+                <div class="shop-chips">
+                    <div class="shop-chip" id="craft-chip-value" onclick="toggleCraftChip('value')">Value</div>
+                    <div class="shop-chip" id="craft-chip-speed" onclick="toggleCraftChip('speed')">Speed</div>
+                    <div class="shop-chip" id="craft-chip-auto" onclick="toggleCraftChip('auto')">Auto</div>
+                    <div class="shop-chip" id="craft-chip-synergy" onclick="toggleCraftChip('synergy')">Synergy</div>
+                </div>
+                <button class="card-action-btn upgrade-btn" id="craft-btn" onclick="craftSelectedCard()">Craft</button>
+            </div>
+        </div>
+
+        <div class="shop-section" style="margin-bottom:10px;">
+            <div class="shop-section-header">
+                <span class="shop-section-label">Scrap</span>
+            </div>
+            <div class="shop-row-actions">
+                <div class="shop-chips">
+                    <div class="shop-chip" id="scrap-chip-common" onclick="toggleScrapChip('common')">Common +10✨</div>
+                    <div class="shop-chip" id="scrap-chip-rare" onclick="toggleScrapChip('rare')">Rare +30✨</div>
+                    <div class="shop-chip" id="scrap-chip-epic" onclick="toggleScrapChip('epic')">Epic +100✨</div>
+                </div>
+                <button class="card-action-btn scrap-btn" id="scrap-btn" onclick="executeScrapSelected()">Scrap</button>
+            </div>
         </div>
         <div class="inventory-grid" id="inventory-grid"></div>
     </div>
@@ -202,6 +245,7 @@
         <div class="modal-alert" style="border-color: var(--synergy); background: rgba(34, 211, 238, 0.1); color: var(--text);">
             Try to time your clicks so your boxes jump together!
         </div>
+        <p style="color: var(--text-dim); line-height: 1.5; margin-top: 12px;">Keep the synergies coming to build a <strong style="color: #c084fc;">Chain</strong>! The bar on the left fills up with each synergy and multiplies your bonus — but it drains if you stop. Manual clicks fill it faster than auto-jumps.</p>
         <button class="btn-tactile draw-btn" style="background: var(--synergy); color: white; border-color: #0891b2; box-shadow: 0 6px 0 #0e7490; margin-bottom: 0; width: 100%;" onclick="toggleModal('tutorial-modal')">Got it!</button>
     </div>
 </div>
@@ -228,11 +272,17 @@
             <div style="margin-bottom: 15px;">
                 <p>Total Capital</p>
                 <h1 id="total-money">$0</h1>
-                <div id="synergy-msg" class="synergy-indicator"></div>
             </div>
         </div>
 
-        <div class="stage" id="stage"></div>
+        <div class="stage-wrap">
+            <div class="chain-bar-container" id="chain-bar-container">
+                <div class="chain-bar-label" id="chain-bar-label">⛓</div>
+                <div class="chain-bar-fill" id="chain-bar-fill"></div>
+                <div class="chain-bar-decay" id="chain-bar-decay"></div>
+            </div>
+            <div class="stage" id="stage"></div>
+        </div>
         <div class="upgrades-container" id="upgrades-container"></div>
 
         <footer class="site-footer">
@@ -259,12 +309,10 @@
     </div>
 </div>
 
-
 <div class="modal-overlay" id="card-tutorial-modal" onclick="if(event.target.id === 'card-tutorial-modal') dismissCardTutorial()">
     <div class="modal-content" style="max-width: 400px; text-align: center;">
         <div class="modal-header" style="justify-content: center; border-bottom: none; margin-bottom: 0;">
-            <h2 style="color: var(--accent-0);">New Cards Available!</h2>
-            <button class="close-btn" style="position: absolute; right: 20px; top: 20px;" onclick="dismissCardTutorial()">✕</button>
+            <h2 style="color: var(--accent-0);">Card Shop Unlocked!</h2>
         </div>
         <p style="font-weight: 600; font-size: 1.1rem; color: var(--text);">You can now afford your first Card!</p>
         <p style="color: var(--text-dim); line-height: 1.5;">Cards provide <strong>powerful permanent boosts</strong> to your boxes. Visit the shop to draw one, then equip it to a box to start earning more!</p>
@@ -272,6 +320,17 @@
             Check the Card Shop button's progress bar to see when you can buy more!
         </div>
         <button class="btn-tactile draw-btn" style="background: var(--accent-0); color: white; border-color: #1d4ed8; box-shadow: 0 6px 0 #1e3a8a; margin-bottom: 0; width: 100%;" onclick="dismissCardTutorial()">Let's Shop!</button>
+    </div>
+</div>
+
+<div class="modal-overlay" id="stats-modal" onclick="closeModal(event, 'stats-modal')">
+    <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+            <h2 id="stats-box-name">Box Stats</h2>
+            <button class="close-btn" onclick="toggleModal('stats-modal')">✕</button>
+        </div>
+        <div id="stats-content"></div>
+        <button class="btn-tactile draw-btn" style="width:100%; margin-top:20px;" onclick="toggleModal('stats-modal')">Back to Upgrades</button>
     </div>
 </div>
 

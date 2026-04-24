@@ -7,6 +7,9 @@ let pendingScrapCardId = null;
 let pendingSwitchCardId = null;
 let pendingSwitchBoxIndex = null;
 let pendingBulkRarity = null;
+let selectedTargetType = null;
+let selectedCraftType = null;
+let scrapSelection = { common: false, rare: false, epic: false };
 
 function getActualCardCost() { 
     return Math.floor(cardPackCost * (1 - (talents.cheapCards.level * 0.10))); 
@@ -19,8 +22,60 @@ function updateCardPackCost() {
     }
 }
 
-function startDrawAnimation() {
-    const actualCost = getActualCardCost();
+function generateCardValue(type, rarity) {
+    if (type === 'value') {
+        if (rarity === 'common') return Math.floor(Math.random() * 30) + 20;
+        if (rarity === 'rare') return Math.floor(Math.random() * 50) + 50;
+        if (rarity === 'epic') return Math.floor(Math.random() * 150) + 100;
+    } else if (type === 'speed' || type === 'auto') {
+        if (rarity === 'common') return Math.floor(Math.random() * 15) + 10;
+        if (rarity === 'rare') return Math.floor(Math.random() * 20) + 25;
+        if (rarity === 'epic') return Math.floor(Math.random() * 35) + 45;
+    } else if (type === 'synergy') {
+        if (rarity === 'common') return 1;
+        if (rarity === 'rare') return 2;
+        if (rarity === 'epic') return Math.floor(Math.random() * 2) + 3;
+    }
+    return 1;
+}
+
+function showCardFlip(card) {
+    const inner = document.getElementById('card-flip-inner');
+    const front = document.getElementById('card-flip-front');
+    const rarityEl = document.getElementById('card-flip-rarity');
+    const statEl = document.getElementById('card-flip-stat');
+    const descEl = document.getElementById('card-flip-desc');
+
+    if (front) front.className = `card-flip-front ${card.rarity}`;
+    if (rarityEl) rarityEl.textContent = card.rarity;
+    if (statEl) statEl.textContent = card.text;
+    if (descEl) descEl.textContent = card.typeName;
+    if (inner) inner.classList.remove('flipped');
+
+    const actionBtn = document.getElementById('card-action-btn');
+    if (actionBtn) { actionBtn.disabled = true; actionBtn.innerHTML = '...'; }
+
+    setTimeout(() => {
+        if (inner) inner.classList.add('flipped');
+        setTimeout(() => {
+            const zone = document.getElementById('card-showcase-zone');
+            if (card.rarity !== 'common') spawnParticles(zone, card.rarity);
+            if (actionBtn) {
+                actionBtn.disabled = false;
+                actionBtn.innerHTML = 'COLLECT';
+                actionBtn.style.background = 'var(--money-green)';
+                actionBtn.style.borderColor = '#15803d';
+                actionBtn.style.boxShadow = '0 6px 0 #166534';
+                actionBtn.style.color = '#000';
+            }
+            isDrawingCard = false;
+        }, 700);
+    }, 500);
+}
+
+function startDrawAnimation(forcedType) {
+    const baseCost = getActualCardCost();
+    const actualCost = forcedType ? baseCost * 3 : baseCost;
     if (money < actualCost || isDrawingCard) return;
 
     isDrawingCard = true;
@@ -28,104 +83,34 @@ function startDrawAnimation() {
     cardPackCost = Math.floor(cardPackCost * 1.5);
     updateUI();
 
-    const btn = document.getElementById('draw-card-btn');
-    btn.style.display = 'none';
+    renderInventory();
 
-    document.getElementById('card-showcase-container').style.display = 'flex';
-    const showcase = document.getElementById('card-showcase');
-    document.getElementById('collect-btn').style.display = 'none';
-    showcase.innerHTML = '';
-
-    const isFirstCard = (nextCardId === 1);
-    let roll = Math.random();
-    
-    // Apply luckyDraw bonus (level * 1% = 0.01)
-    const luckBonus = talents.luckyDraw.level * 0.01;
-    roll += luckBonus; // Higher roll is better
-
-    let rarity = 'common';
-    if (roll > 0.95) rarity = 'epic';
-    else if (roll > 0.70) rarity = 'rare';
-
-    // Tvingar första kortet att vara value boost
-    let typeObj;
-    if (isFirstCard) {
-        typeObj = cardTypes.find(c => c.id === 'value');
+    // Pity system
+    let rarity;
+    if (pitySinceLastEpic >= 25) {
+        rarity = 'epic';
+    } else if (pitySinceLastRare >= 8) {
+        rarity = 'rare';
     } else {
-        typeObj = cardTypes[Math.floor(Math.random() * cardTypes.length)];
+        const luckBonus = talents.luckyDraw.level * 0.01;
+        const roll = Math.random() + luckBonus;
+        rarity = roll > 0.95 ? 'epic' : roll > 0.70 ? 'rare' : 'common';
     }
 
-    let value = 0;
-    if (typeObj.id === 'value') {
-        if (rarity === 'common') value = Math.floor(Math.random() * 30) + 20;
-        if (rarity === 'rare') value = Math.floor(Math.random() * 50) + 50;
-        if (rarity === 'epic') value = Math.floor(Math.random() * 150) + 100;
-    } else if (typeObj.id === 'speed' || typeObj.id === 'auto') {
-        if (rarity === 'common') value = Math.floor(Math.random() * 15) + 10;
-        if (rarity === 'rare') value = Math.floor(Math.random() * 20) + 25;
-        if (rarity === 'epic') value = Math.floor(Math.random() * 35) + 45;
-    } else if (typeObj.id === 'synergy') {
-        if (rarity === 'common') value = 1;
-        if (rarity === 'rare') value = 2;
-        if (rarity === 'epic') value = Math.floor(Math.random() * 2) + 3;
-    }
+    if (rarity === 'epic') { pitySinceLastRare = 0; pitySinceLastEpic = 0; }
+    else if (rarity === 'rare') { pitySinceLastRare = 0; pitySinceLastEpic++; }
+    else { pitySinceLastRare++; pitySinceLastEpic++; }
 
+    const typeObj = forcedType
+        ? cardTypes.find(c => c.id === forcedType)
+        : (nextCardId === 1 ? cardTypes.find(c => c.id === 'value') : cardTypes[Math.floor(Math.random() * cardTypes.length)]);
+
+    const value = generateCardValue(typeObj.id, rarity);
     pendingDrawnCard = { id: nextCardId++, rarity, type: typeObj.id, value, typeName: typeObj.name, text: typeObj.format.replace('{val}', value), equippedTo: null, level: 0 };
 
-    let ticks = 0;
-    const maxTicks = 16;
-    const interval = setInterval(() => {
-        ticks++;
-        const randRarity = ['common', 'rare', 'epic'][Math.floor(Math.random() * 3)];
-        const randVal = Math.floor(Math.random() * 100) + 1;
-        const randScale = 0.9 + Math.random() * 0.1;
-        const randRot = Math.random() * 6 - 3;
-
-        showcase.innerHTML = `
-            <div class="equip-card-item ${randRarity} rolling-card" style="transform: scale(${randScale}) rotate(${randRot}deg);">
-                <div class="card-rarity">${randRarity}</div>
-                <div class="card-stat">+${randVal}???</div>
-            </div>
-        `;
-
-        if (ticks >= maxTicks) {
-            clearInterval(interval);
-            finishDrawAnimation(pendingDrawnCard);
-            isDrawingCard = false; // Allow closing the modal now that animation is done
-        }
-    }, 80);
+    showCardFlip(pendingDrawnCard);
 }
 
-function finishDrawAnimation(newCard, isBoosted = false) {
-    const showcase = document.getElementById('card-showcase');
-    showcase.innerHTML = `
-        <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
-            <div class="equip-card-item ${newCard.rarity} rolling-card pop-anim">
-                <div class="card-rarity">${newCard.rarity}</div>
-                <div class="card-stat">${newCard.text}</div>
-                <div class="card-desc">${newCard.typeName}</div>
-            </div>
-            <!--
-            <div style="display: flex; gap: 10px; width: 100%; max-width: 250px; margin-top: 15px;">
-                <button id="boost-btn" class="btn-tactile draw-btn ${isBoosted ? 'disabled-btn' : ''}" style="background:var(--synergy); color:white; border:none; flex: 1; margin:0; font-size: 0.6rem; padding: 8px 4px; box-shadow: 0 4px 0 #0e7490;" onclick="boostCurrentCard()" ${isBoosted ? 'disabled' : ''}>
-                    ${isBoosted ? 'Boosted!' : 'Watch Ad (+10-45%)'}
-                </button>
-                <button id="collect-btn" class="btn-tactile draw-btn" style="background:var(--money-green); color:black; border:none; flex: 1; margin:0; font-size: 0.6rem; padding: 8px 4px; box-shadow: 0 4px 0 #15803d;" onclick="collectCard()">
-                    Collect
-                </button>
-            </div>
-            -->
-            <div style="display: flex; gap: 10px; width: 100%; max-width: 250px; margin-top: 15px;">
-                <button id="collect-btn" class="btn-tactile draw-btn" style="background:var(--money-green); color:black; border:none; flex: 1; margin:0; font-size: 0.8rem; padding: 10px 4px; box-shadow: 0 4px 0 #15803d;" onclick="collectCard()">
-                    Collect
-                </button>
-            </div>        </div>
-    `;
-
-    if (newCard.rarity === 'rare' || newCard.rarity === 'epic') {
-        spawnParticles(showcase, newCard.rarity);
-    }
-}
 
 function boostCurrentCard() {
     if (!pendingDrawnCard) return;
@@ -173,17 +158,24 @@ function boostCurrentCard() {
     });
 }
 function collectCard() {
-    if(!pendingDrawnCard) return;
+    if (!pendingDrawnCard) return;
 
     cards.push(pendingDrawnCard);
-    showSynergyFeedback(`🃏 Collected ${pendingDrawnCard.rarity.toUpperCase()} card!`, `var(--rarity-${pendingDrawnCard.rarity})`);
+    showSynergyFeedback(`Collected ${pendingDrawnCard.rarity.toUpperCase()} card!`, `var(--rarity-${pendingDrawnCard.rarity})`);
 
     pendingDrawnCard = null;
     isDrawingCard = false;
 
-    document.getElementById('card-showcase-container').style.display = 'none';
-    const btn = document.getElementById('draw-card-btn');
-    btn.style.display = 'block';
+    const inner = document.getElementById('card-flip-inner');
+    if (inner) inner.classList.remove('flipped');
+
+    const actionBtn = document.getElementById('card-action-btn');
+    if (actionBtn) {
+        actionBtn.style.background = '';
+        actionBtn.style.borderColor = '';
+        actionBtn.style.boxShadow = '';
+        actionBtn.style.color = '';
+    }
 
     renderInventory();
     updateUI();
@@ -192,13 +184,62 @@ function collectCard() {
 
 function renderInventory() {
     const grid = document.getElementById('inventory-grid');
-    const btn = document.getElementById('draw-card-btn');
+    const btn = document.getElementById('card-action-btn');
     const actualCost = getActualCardCost();
+    const targetedCost = actualCost * 3;
 
-    btn.innerHTML = `Draw Card <span style="color:var(--bg); font-family:var(--font-mono); font-size:1rem; margin-left:5px;">$${actualCost.toLocaleString()}</span>`;
+    if (btn && !pendingDrawnCard && !isDrawingCard) {
+        const displayCost = selectedTargetType ? targetedCost : actualCost;
+        const canAfford = money >= displayCost;
+        btn.disabled = !canAfford;
+        if (!canAfford) btn.classList.add('disabled-btn'); else btn.classList.remove('disabled-btn');
+        btn.innerHTML = `Draw Card <span style="color:var(--bg); font-family:var(--font-mono); font-size:1rem; margin-left:5px;">$${displayCost.toLocaleString()}</span>`;
+    }
 
-    if (!isDrawingCard) {
-        btn.disabled = money < actualCost;
+    // Targeted draw chips
+    const tdCostEl = document.getElementById('targeted-draw-cost');
+    if (tdCostEl) tdCostEl.innerText = selectedTargetType ? `$${targetedCost.toLocaleString()} (3×)` : `$${targetedCost.toLocaleString()}`;
+    ['value', 'speed', 'auto', 'synergy'].forEach(type => {
+        const chip = document.getElementById(`target-chip-${type}`);
+        if (!chip) return;
+        chip.classList.toggle('active', selectedTargetType === type);
+        chip.classList.toggle('disabled', isDrawingCard);
+    });
+
+    // Craft chips + button
+    const CRAFT_COST = 150;
+    ['value', 'speed', 'auto', 'synergy'].forEach(type => {
+        const chip = document.getElementById(`craft-chip-${type}`);
+        if (!chip) return;
+        chip.classList.toggle('active', selectedCraftType === type);
+        chip.classList.toggle('disabled', cardDust < CRAFT_COST);
+    });
+    const craftBtn = document.getElementById('craft-btn');
+    if (craftBtn) {
+        const canCraft = cardDust >= CRAFT_COST && selectedCraftType !== null;
+        craftBtn.disabled = !canCraft;
+        if (!canCraft) craftBtn.classList.add('disabled-btn'); else craftBtn.classList.remove('disabled-btn');
+    }
+
+    // Scrap chips + button
+    ['common', 'rare', 'epic'].forEach(rarity => {
+        const chip = document.getElementById(`scrap-chip-${rarity}`);
+        if (chip) chip.classList.toggle('active', scrapSelection[rarity]);
+    });
+    const scrapBtn = document.getElementById('scrap-btn');
+    if (scrapBtn) {
+        const hasCards = Object.keys(scrapSelection).some(r => scrapSelection[r] && cards.some(c => c.rarity === r && c.equippedTo === null));
+        scrapBtn.disabled = !hasCards;
+        if (!hasCards) scrapBtn.classList.add('disabled-btn'); else scrapBtn.classList.remove('disabled-btn');
+    }
+
+    // Pity display
+    const pityEl = document.getElementById('pity-display');
+    if (pityEl) {
+        const parts = [];
+        if (pitySinceLastRare > 0) parts.push(`Rare ≤${8 - pitySinceLastRare} draws`);
+        if (pitySinceLastEpic > 0) parts.push(`Epic ≤${25 - pitySinceLastEpic} draws`);
+        pityEl.textContent = parts.join(' · ');
     }
 
     if (cards.length === 0) {
@@ -232,6 +273,28 @@ function renderInventory() {
         `;
         grid.appendChild(el);
     });
+}
+
+function craftCard(type) {
+    const CRAFT_COST = 150;
+    if (cardDust < CRAFT_COST) return;
+
+    const typeObj = cardTypes.find(c => c.id === type);
+    const value = generateCardValue(type, 'common');
+    const newCard = {
+        id: nextCardId++, rarity: 'common', type, value,
+        typeName: typeObj.name, text: typeObj.format.replace('{val}', value),
+        equippedTo: null, level: 0
+    };
+
+    cardDust -= CRAFT_COST;
+    cards.push(newCard);
+    updateCardPackCost();
+
+    showSynergyFeedback(`Crafted ${typeObj.name}!`, 'var(--synergy)');
+    renderInventory();
+    updateUI();
+    saveGame();
 }
 
 function openEquipModal(boxIndex) {
@@ -521,19 +584,68 @@ function openBulkScrapModal(rarity) {
 
 function confirmBulkScrap() {
     if (!pendingBulkRarity) return;
-    
-    const targets = cards.filter(c => c.rarity === pendingBulkRarity && c.equippedTo === null);
-    const dustGain = targets.length * (pendingBulkRarity === 'epic' ? 100 : (pendingBulkRarity === 'rare' ? 30 : 10));
-    
+
+    const rarities = Array.isArray(pendingBulkRarity) ? pendingBulkRarity : [pendingBulkRarity];
+    const targets = cards.filter(c => rarities.includes(c.rarity) && c.equippedTo === null);
+    const dustGain = targets.reduce((sum, c) => sum + (c.rarity === 'epic' ? 100 : c.rarity === 'rare' ? 30 : 10), 0);
+
     cardDust += dustGain;
-    cards = cards.filter(c => !(c.rarity === pendingBulkRarity && c.equippedTo === null));
-    
+    cards = cards.filter(c => !(rarities.includes(c.rarity) && c.equippedTo === null));
+
     showSynergyFeedback(`✨ Scrapped ${targets.length} cards for +${dustGain} Dust!`, "var(--synergy)");
-    
+
     pendingBulkRarity = null;
     toggleModal('bulk-scrap-modal');
     renderInventory();
     renderLayout();
     updateUI();
     saveGame();
+}
+
+function handleCardAction() {
+    if (pendingDrawnCard) {
+        collectCard();
+    } else {
+        startDrawAnimation(selectedTargetType);
+    }
+}
+
+function toggleTargetChip(type) {
+    if (isDrawingCard) return;
+    selectedTargetType = selectedTargetType === type ? null : type;
+    renderInventory();
+}
+
+function toggleCraftChip(type) {
+    if (cardDust < 150) return;
+    selectedCraftType = selectedCraftType === type ? null : type;
+    renderInventory();
+}
+
+function craftSelectedCard() {
+    if (!selectedCraftType) return;
+    craftCard(selectedCraftType);
+    selectedCraftType = null;
+}
+
+function toggleScrapChip(rarity) {
+    scrapSelection[rarity] = !scrapSelection[rarity];
+    renderInventory();
+}
+
+function executeScrapSelected() {
+    const rarities = Object.keys(scrapSelection).filter(r => scrapSelection[r]);
+    if (!rarities.length) return;
+
+    const targets = cards.filter(c => rarities.includes(c.rarity) && c.equippedTo === null);
+    if (!targets.length) return;
+
+    const dustGain = targets.reduce((sum, c) => sum + (c.rarity === 'epic' ? 100 : c.rarity === 'rare' ? 30 : 10), 0);
+    const rarityNames = rarities.map(r => r.charAt(0).toUpperCase() + r.slice(1)).join('/');
+
+    document.getElementById('bulk-rarity-text').innerText = rarityNames;
+    document.getElementById('bulk-scrap-warning').innerHTML = `You are about to scrap <strong>${targets.length}</strong> ${rarityNames} card(s) for <span style="color:var(--synergy);">✨ ${dustGain} Dust</span>.`;
+    document.getElementById('bulk-scrap-confirm-btn').style.display = 'block';
+    pendingBulkRarity = rarities;
+    toggleModal('bulk-scrap-modal');
 }
