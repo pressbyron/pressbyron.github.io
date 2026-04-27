@@ -61,6 +61,9 @@ function confirmPrestige() {
     toggleModal('prestige-modal');
 }
 
+// ============================================================
+// PARTICLES & VISUAL FEEDBACK
+// ============================================================
 function spawnParticles(container, rarity) {
     const palette = rarity === 'epic'
         ? ['#d8b4fe', '#c084fc', '#a855f7', '#e879f9']
@@ -88,28 +91,72 @@ function spawnParticles(container, rarity) {
     }
 }
 
+// ============================================================
+// LAYOUT  (full DOM rebuild — call only on structural changes)
+// ============================================================
 function renderTalents() {
-    const grid = document.getElementById('talent-grid'); 
-    if (!grid) return;
-    grid.innerHTML = '';
-    
-    for (const [key, t] of Object.entries(talents)) {
-        const cost = getTalentCost(key); 
-        const isMaxed = t.level >= t.maxLevel;
-        const card = document.createElement('div'); 
-        card.className = `talent-card ${isMaxed ? 'maxed' : ''}`;
-        card.innerHTML = `
-            <div class="talent-title">${t.name}</div>
-            <div class="talent-level">Lvl ${t.level} / ${t.maxLevel}</div>
-            <div class="talent-desc">${t.desc}</div>
-            <button class="btn-tactile buy-talent-btn" onclick="buyTalent('${key}')" ${prestigeTokens < cost || isMaxed ? 'disabled' : ''}>
-                ${isMaxed ? 'MAXED OUT' : `Upgrade (${cost} PT)`}
-            </button>
-        `;
-        grid.appendChild(card);
-    }
+    const container = document.getElementById('talent-tree');
+    if (!container) return;
+
     const tokenEl = document.getElementById('modal-tokens');
     if (tokenEl) tokenEl.innerText = prestigeTokens;
+
+    function prereqMet(key) {
+        const req = talents[key].requires;
+        return !req || talents[req].level > 0;
+    }
+
+    function nodeHTML(key) {
+        const t = talents[key];
+        const cost = getTalentCost(key);
+        const isMaxed = t.level >= t.maxLevel;
+        const locked = !prereqMet(key);
+        const canAfford = !locked && !isMaxed && prestigeTokens >= cost;
+        const pips = t.maxLevel <= 1 ? '' :
+            `<div class="talent-pips">${Array.from({length: t.maxLevel}, (_, i) =>
+                `<div class="pip${i < t.level ? ' filled' : ''}"></div>`).join('')}</div>`;
+        return `
+            <div class="talent-node${isMaxed ? ' maxed' : ''}${locked ? ' locked' : ''}">
+                <div class="talent-title">${t.name}</div>
+                <div class="talent-desc">${t.desc}</div>
+                ${pips}
+                <button class="btn-tactile buy-talent-btn" onclick="buyTalent('${key}')"
+                    ${!canAfford ? 'disabled' : ''}>
+                    ${isMaxed ? '★ MAXED' : locked ? '🔒 Locked' : `${cost} PT`}
+                </button>
+            </div>`;
+    }
+
+    const fork        = `<div class="tree-fork"><div class="fork-leg"></div><div class="fork-leg"></div></div>`;
+    const singleDown  = `<div class="tier-connectors"><div class="tree-down"></div></div>`;
+    const singleLeft  = `<div class="tier-connectors"><div class="tree-down"></div><div class="tier-gap"></div></div>`;
+    const singleRight = `<div class="tier-connectors"><div class="tier-gap"></div><div class="tree-down"></div></div>`;
+    const bothDown    = `<div class="tier-connectors"><div class="tree-down"></div><div class="tree-down"></div></div>`;
+
+    container.innerHTML = `
+        <div class="talent-branches">
+            <div class="talent-branch">
+                <div class="branch-label">Income</div>
+                <div class="tier">${nodeHTML('baseIncome')}</div>
+                ${singleDown}
+                <div class="tier">${nodeHTML('globalValue')}</div>
+                ${fork}
+                <div class="tier two-col">${nodeHTML('synergy')}${nodeHTML('frenzyFinder')}</div>
+                ${singleLeft}
+                <div class="tier two-col">${nodeHTML('autoControl')}<div class="tier-gap"></div></div>
+            </div>
+            <div class="branch-sep"></div>
+            <div class="talent-branch">
+                <div class="branch-label">Mastery</div>
+                <div class="tier">${nodeHTML('highJump')}</div>
+                ${fork}
+                <div class="tier two-col">${nodeHTML('cheapCards')}${nodeHTML('autoSave')}</div>
+                ${bothDown}
+                <div class="tier two-col">${nodeHTML('luckyDraw')}${nodeHTML('bonusTokens')}</div>
+                ${singleRight}
+                <div class="tier two-col"><div class="tier-gap"></div>${nodeHTML('jumpQueue')}</div>
+            </div>
+        </div>`;
 }
 
 function renderLayout() {
@@ -144,7 +191,7 @@ function renderLayout() {
             <div class="unlock-fill" id="ghost-unlock-fill"></div>
             <div class="unlock-text">
                 <div style="text-transform:uppercase; font-weight:800; letter-spacing:1px; margin-bottom:5px;">Unlock Ghost Box</div>
-                <div style="color:var(--money-green); font-size:1.2rem; font-family:var(--font-mono); font-weight:bold;">$${ghostBoxData.unlockCost.toLocaleString()}</div>
+                <div style="color:var(--money-green); font-size:1.2rem; font-family:var(--font-mono); font-weight:bold;">$${fmt(ghostBoxData.unlockCost)}</div>
             </div>
         `;
         ghostCol.onclick = () => unlockGhostBox();
@@ -158,7 +205,7 @@ function renderLayout() {
                 <div class="jumps-counter-fill" id="ghost-sync-fill" style="background:var(--synergy); opacity:0.2;"></div>
                 <div class="jumps-counter-text" id="ghost-sync-text">Synergy: Cooldown</div>
             </div>
-            <div id="ghost-ups" style="display:${ghostBoxData.collapsed ? 'none' : 'flex'}; flex-direction:column; margin-top:5px;">
+            <div id="ghost-ups" style="display:${ghostBoxData.collapsed ? 'none' : 'flex'}; flex-direction:column; margin-top:2px;">
                 <button id="up-ghost-value" class="btn-tactile up-btn" onclick="buyGhostUp('value')">
                     <div>Ghost Value</div>
                     <div id="cost-ghost-value">$0</div>
@@ -180,6 +227,9 @@ function renderLayout() {
                     <div class="auto-fill" id="ghost-fill-mini"></div>
                 </div>
             ` : ''}
+            <div style="text-align:center;">
+                <button onclick="openStats('ghost')" style="background:none; border:none; color:var(--text-dim); font-size:0.6rem; cursor:pointer; font-family:var(--font-ui); font-weight:800; text-transform:uppercase; letter-spacing:1px; padding:2px 4px; opacity:0.4;">Stats</button>
+            </div>
         `;
     }
     upgrades.appendChild(ghostCol);
@@ -200,6 +250,10 @@ function renderLayout() {
                 <div class="box box-${idx} ${evolutionClass}" id="box-${idx}" onclick="jump(${idx})">
                     <img src="images/face_${String.fromCharCode(97 + idx)}.png" class="box-face">
                 </div>
+                <svg class="auto-ring ring-${idx}" id="auto-ring-${idx}" viewBox="0 0 20 20" style="display:none">
+                    <circle class="auto-ring-bg" cx="10" cy="10" r="7.5"/>
+                    <circle class="auto-ring-fill" id="auto-ring-fill-${idx}" cx="10" cy="10" r="7.5"/>
+                </svg>
             `;
             stage.appendChild(wrapper);
 
@@ -233,7 +287,7 @@ function renderLayout() {
                     <div class="jumps-counter-fill" id="jump-fill-${idx}"></div>
                     <div class="jumps-counter-text" id="jump-text-${idx}">Jumps: 0 / 1,000</div>
                 </div>
-                <div id="ups-${idx}" style="display:${b.collapsed ? 'none' : 'flex'}; flex-direction:column; margin-top:5px;">
+                <div id="ups-${idx}" style="display:${b.collapsed ? 'none' : 'flex'}; flex-direction:column; margin-top:2px;">
                     <button id="up-inc-${idx}" class="btn-tactile up-btn" onclick="buyUp(${idx},'inc')">
                         <div id="up-inc-title-${idx}">Value</div>
                         <div id="up-inc-cost-${idx}">$0</div>
@@ -258,6 +312,13 @@ function renderLayout() {
                         <div class="auto-fill" id="auto-fill-mini-${idx}"></div>
                     </div>
                 ` : ''}
+                <button id="up-evolve-${idx}" class="btn-tactile up-btn up-btn-evolve" onclick="evolveBox(${idx})">
+                    <div class="evolve-fill" id="evolve-fill-${idx}"></div>
+                    <div class="up-btn-content">
+                        <div id="up-evolve-title-${idx}">Evolve 💠${b.evolution > 0 ? ` (E${b.evolution}→E${b.evolution+1})` : ''}</div>
+                        <div id="up-evolve-cost-${idx}">$0</div>
+                    </div>
+                </button>
                 <div style="text-align:center;">
                     <button onclick="openStats(${idx})" style="background:none; border:none; color:var(--text-dim); font-size:0.6rem; cursor:pointer; font-family:var(--font-ui); font-weight:800; text-transform:uppercase; letter-spacing:1px; padding:2px 4px; opacity:0.4;">Stats</button>
                 </div>
@@ -279,6 +340,12 @@ function renderLayout() {
             b.cachedElements.autoToggleBtn = document.getElementById(`auto-toggle-${idx}`);
             b.cachedElements.autoToggleLabel = document.getElementById(`auto-toggle-label-${idx}`);
             b.cachedElements.wrapper = document.getElementById(`wrapper-${idx}`);
+            b.cachedElements.autoRing = document.getElementById(`auto-ring-${idx}`);
+            b.cachedElements.autoRingFill = document.getElementById(`auto-ring-fill-${idx}`);
+            b.cachedElements.upEvolveBtn = document.getElementById(`up-evolve-${idx}`);
+            b.cachedElements.upEvolveTitle = document.getElementById(`up-evolve-title-${idx}`);
+            b.cachedElements.upEvolveCost = document.getElementById(`up-evolve-cost-${idx}`);
+            b.cachedElements.upEvolveFill = document.getElementById(`evolve-fill-${idx}`);
         } else {
             const prevBox = boxData[idx-1];
             if (prevBox && prevBox.active) {
@@ -289,7 +356,7 @@ function renderLayout() {
                     <div class="unlock-fill" id="unlock-fill-${idx}"></div>
                     <div class="unlock-text">
                         <div style="text-transform:uppercase; font-weight:800; letter-spacing:1px; margin-bottom:5px;">Unlock ${b.name}</div>
-                        <div id="unlock-cost-${idx}" style="color:var(--money-green); font-size:1.2rem; font-family:var(--font-mono); font-weight:bold;">$${b.unlockCost.toLocaleString()}</div>
+                        <div id="unlock-cost-${idx}" style="color:var(--money-green); font-size:1.2rem; font-family:var(--font-mono); font-weight:bold;">$${fmt(b.unlockCost)}</div>
                     </div>
                 `;
                 unlockCol.onclick = () => unlockBox(idx);
@@ -302,6 +369,9 @@ function renderLayout() {
     });
 }
 
+// ============================================================
+// FLOATING TEXT & SYNERGY FEEDBACK
+// ============================================================
 function createFloatingText(idx, amount, isSynergy, isHighJump) {
     const wrapper = idx === 'ghost' ? document.getElementById('wrapper-ghost') : document.getElementById(`wrapper-${idx}`);
     if (!wrapper) return;
@@ -314,7 +384,7 @@ function createFloatingText(idx, amount, isSynergy, isHighJump) {
         const newTotal = prevAmount + amount;
         
         existing.dataset.amount = newTotal;
-        existing.innerText = `+$${newTotal.toLocaleString()}`;
+        existing.innerText = `+$${fmt(newTotal)}`;
         existing.style.color = 'var(--synergy)';
         existing.style.textShadow = '0 0 10px rgba(34, 211, 238, 0.5), 0 2px 4px rgba(0,0,0,0.8)';
         return;
@@ -325,7 +395,7 @@ function createFloatingText(idx, amount, isSynergy, isHighJump) {
     floatEl.dataset.amount = amount;
     floatEl.dataset.time = Date.now();
 
-    let text = `+$${amount.toLocaleString()}`;
+    let text = `+$${fmt(amount)}`;
     if (isHighJump) text += " ⭐";
 
     floatEl.innerText = text;
@@ -363,43 +433,58 @@ function flashError(el) {
     setTimeout(() => el.classList.remove('error-flash'), 400);
 }
 
+// ============================================================
+// STATS MODAL
+// ============================================================
 function openStats(idx) {
     activeStatsIdx = idx;
-    const b = boxData[idx];
+    const isGhost = idx === 'ghost';
+    const b = isGhost ? ghostBoxData : boxData[idx];
     const statsBoxName = document.getElementById('stats-box-name');
     if (statsBoxName) {
-        statsBoxName.innerText = `${b.name} Statistics`;
-        statsBoxName.style.color = b.color;
+        statsBoxName.innerText = isGhost ? 'Ghost Box Statistics' : `${b.name} Statistics`;
+        statsBoxName.style.color = isGhost ? '#64748b' : b.color;
     }
-    
-    const totalLifetimeIncome = boxData.reduce((sum, box) => sum + (box.totalIncome || 0), 0);
-    const percent = totalLifetimeIncome > 0 ? ((b.totalIncome / totalLifetimeIncome) * 100).toFixed(1) : 0;
+
+    const totalLifetimeIncome = boxData.reduce((sum, box) => sum + (box.totalIncome || 0), 0) + (ghostBoxData.totalIncome || 0);
+    const myIncome = b.totalIncome || 0;
+    const percent = totalLifetimeIncome > 0 ? ((myIncome / totalLifetimeIncome) * 100).toFixed(1) : 0;
 
     const statsContent = document.getElementById('stats-content');
     if (statsContent) {
+        const jumpsVal = isGhost ? (b.totalJumps || 0) : (b.lifetimeJumps || 0);
+        const prestigeRow = isGhost ? '' : `<div class="stat-row"><span>Times Prestiged</span><strong id="stat-prestige">${b.prestige.toLocaleString()}</strong></div>`;
         statsContent.innerHTML = `
-            <div class="stat-row"><span>Total Jumps</span><strong id="stat-jumps">${b.jumps.toLocaleString()}</strong></div>
-            <div class="stat-row"><span>Times Prestiged</span><strong id="stat-prestige">${b.prestige.toLocaleString()}</strong></div>
-            <div class="stat-row"><span>Total Income</span><strong style="color:var(--money-green)">$<span id="stat-income">${(b.totalIncome || 0).toLocaleString()}</span></strong></div>
+            <div class="stat-row"><span>Total Jumps</span><strong id="stat-jumps">${jumpsVal.toLocaleString()}</strong></div>
+            ${prestigeRow}
+            <div class="stat-row"><span>Total Income</span><strong style="color:var(--money-green)">$<span id="stat-income">${fmt(myIncome)}</span></strong></div>
             <div class="stat-row"><span>Income Share</span><strong id="stat-percent">${percent}%</strong></div>
-            <div class="stat-row"><span>Best Single Jump</span><strong style="color:var(--synergy)">$<span id="stat-best">${(b.bestJump || 0).toLocaleString()}</span></strong></div>
+            <div class="stat-row"><span>Best Single Jump</span><strong style="color:var(--synergy)">$<span id="stat-best">${fmt(b.bestJump || 0)}</span></strong></div>
         `;
     }
-    
+
     toggleModal('stats-modal');
 }
 
+// ============================================================
+// PER-FRAME UPDATE  (runs every rAF — touch only cached elements)
+// Subsections: money/tokens → shop modal → upgrade modal →
+//              stats modal → ghost box → chain bar → per-box loop
+// ============================================================
 function updateUI() {
     const moneyFloor = Math.floor(money);
     const moneyChanged = moneyFloor !== lastMoney;
     
     if (moneyChanged) {
-        const moneyStr = moneyFloor.toLocaleString();
+        const moneyStr = fmt(moneyFloor);
         const totalMoneyEl = document.getElementById('total-money');
         if (totalMoneyEl) totalMoneyEl.innerText = "$" + moneyStr;
-        
+
         const shopMoney = document.getElementById('shop-money-display');
         if (shopMoney) shopMoney.innerText = "$" + moneyStr;
+
+        const stickyText = document.getElementById('sticky-money-text');
+        if (stickyText) stickyText.innerText = "$" + moneyStr;
         lastMoney = moneyFloor;
     }
     
@@ -408,7 +493,13 @@ function updateUI() {
     
     const talentBtn = document.querySelector('.talent-btn');
     if (talentBtn) {
-        if (prestigeTokens > 0) talentBtn.classList.add('can-afford');
+        const anyAffordable = Object.keys(talents).some(key => {
+            const t = talents[key];
+            const req = t.requires;
+            const prereqOk = !req || talents[req].level > 0;
+            return prereqOk && t.level < t.maxLevel && prestigeTokens >= getTalentCost(key);
+        });
+        if (anyAffordable) talentBtn.classList.add('can-afford');
         else talentBtn.classList.remove('can-afford');
     }
     
@@ -430,6 +521,7 @@ function updateUI() {
     const dustDisplay = document.getElementById('card-dust-display');
     if (dustDisplay) dustDisplay.innerText = cardDust;
 
+    // --- shop modal ---
     const shopModal = document.getElementById('shop-modal');
     if (shopModal && shopModal.classList.contains('active')) {
         const btn = document.getElementById('card-action-btn');
@@ -440,10 +532,11 @@ function updateUI() {
             const canAfford = money >= displayCost;
             btn.disabled = !canAfford;
             if (!canAfford) btn.classList.add('disabled-btn'); else btn.classList.remove('disabled-btn');
-            btn.innerHTML = `Draw Card <span style="color:var(--bg); font-family:var(--font-mono); font-size:1rem; margin-left:5px;">$${displayCost.toLocaleString()}</span>`;
+            btn.innerHTML = `Draw Card <span style="color:var(--bg); font-family:var(--font-mono); font-size:1rem; margin-left:5px;">$${fmt(displayCost)}</span>`;
         }
     }
     
+    // --- upgrade modal ---
     const upgradeModal = document.getElementById('upgrade-modal');
     if (upgradeModal && upgradeModal.classList.contains('active') && typeof upgradingCardId !== 'undefined' && upgradingCardId !== null) {
         const card = cards.find(c => c.id === upgradingCardId);
@@ -454,25 +547,30 @@ function updateUI() {
         }
     }
 
+    // --- stats modal ---
     const statsModal = document.getElementById('stats-modal');
     if (statsModal && statsModal.classList.contains('active') && activeStatsIdx !== null) {
-        const b = boxData[activeStatsIdx];
-        const totalLifetimeIncome = boxData.reduce((sum, box) => sum + (box.totalIncome || 0), 0);
-        const percent = totalLifetimeIncome > 0 ? ((b.totalIncome / totalLifetimeIncome) * 100).toFixed(1) : 0;
-        
+        const isGhost = activeStatsIdx === 'ghost';
+        const b = isGhost ? ghostBoxData : boxData[activeStatsIdx];
+        const totalLifetimeIncome = boxData.reduce((sum, box) => sum + (box.totalIncome || 0), 0) + (ghostBoxData.totalIncome || 0);
+        const myIncome = b.totalIncome || 0;
+        const percent = totalLifetimeIncome > 0 ? ((myIncome / totalLifetimeIncome) * 100).toFixed(1) : 0;
+
         const statJumps = document.getElementById('stat-jumps');
         const statPrestige = document.getElementById('stat-prestige');
         const statIncome = document.getElementById('stat-income');
         const statPercent = document.getElementById('stat-percent');
         const statBest = document.getElementById('stat-best');
 
-        if (statJumps) statJumps.innerText = b.jumps.toLocaleString();
-        if (statPrestige) statPrestige.innerText = b.prestige.toLocaleString();
-        if (statIncome) statIncome.innerText = (b.totalIncome || 0).toLocaleString();
+        const jumpsVal = isGhost ? (b.totalJumps || 0) : (b.lifetimeJumps || 0);
+        if (statJumps) statJumps.innerText = jumpsVal.toLocaleString();
+        if (statPrestige && !isGhost) statPrestige.innerText = b.prestige.toLocaleString();
+        if (statIncome) statIncome.innerText = fmt(myIncome);
         if (statPercent) statPercent.innerText = percent + '%';
-        if (statBest) statBest.innerText = (b.bestJump || 0).toLocaleString();
+        if (statBest) statBest.innerText = fmt(b.bestJump || 0);
     }
 
+    // --- ghost box ---
     if (!ghostBoxData.active) {
         const ce = ghostBoxData.cachedElements;
         if (ce && ce.unlockCol) {
@@ -509,7 +607,7 @@ function updateUI() {
             if (money < cost) upSpeed.classList.add('disabled-btn');
             else upSpeed.classList.remove('disabled-btn');
             const costGhostSpeed = document.getElementById('cost-ghost-speed');
-            if (costGhostSpeed) costGhostSpeed.innerHTML = `$${cost.toLocaleString()} <span style="color:var(--text-dim); font-size:0.7rem;">| ${(getGhostBoxInterval()/1000).toFixed(1)}s</span>`;
+            if (costGhostSpeed) costGhostSpeed.innerHTML = `$${fmt(cost)} <span style="color:var(--text-dim); font-size:0.7rem;">| ${(getGhostBoxInterval()/1000).toFixed(1)}s</span>`;
         }
         const upValue = document.getElementById('up-ghost-value');
         if (upValue) {
@@ -517,19 +615,22 @@ function updateUI() {
             if (money < cost) upValue.classList.add('disabled-btn');
             else upValue.classList.remove('disabled-btn');
             const costGhostValue = document.getElementById('cost-ghost-value');
-            if (costGhostValue) costGhostValue.innerHTML = `$${cost.toLocaleString()} <span style="color:var(--text-dim); font-size:0.7rem;">| ${(getGhostBoxValueMult()*100).toFixed(0)}%</span>`;
+            if (costGhostValue) costGhostValue.innerHTML = `$${fmt(cost)} <span style="color:var(--text-dim); font-size:0.7rem;">| ${(getGhostBoxValueMult()*100).toFixed(0)}%</span>`;
         }
         const upSync = document.getElementById('up-ghost-synergy');
         if (upSync) {
+            const isMaxSync = ghostBoxData.levelSynergy >= GHOST_SYNERGY_MAX_LEVEL;
             const cost = getGhostUpCost('synergy');
-            if (money < cost) upSync.classList.add('disabled-btn');
+            if (isMaxSync || money < cost) upSync.classList.add('disabled-btn');
             else upSync.classList.remove('disabled-btn');
             const costGhostSynergy = document.getElementById('cost-ghost-synergy');
-            if (costGhostSynergy) costGhostSynergy.innerHTML = `$${cost.toLocaleString()} <span style="color:var(--text-dim); font-size:0.7rem;">| ${(getGhostBoxSynergyCooldown()/1000).toFixed(1)}s</span>`;
+            if (costGhostSynergy) costGhostSynergy.innerHTML = isMaxSync
+                ? `MAX SYNC`
+                : `$${fmt(cost)} <span style="color:var(--text-dim); font-size:0.7rem;">| ${(getGhostBoxSynergyCooldown()/1000).toFixed(1)}s</span>`;
         }
     }
 
-    // Chain bar
+    // --- chain bar ---
     const chainFill = document.getElementById('chain-bar-fill');
     const chainDecay = document.getElementById('chain-bar-decay');
     const chainLabel = document.getElementById('chain-bar-label');
@@ -557,6 +658,7 @@ function updateUI() {
         chainContainer.style.setProperty('--chain-glow', chainGlow);
     }
 
+    // --- per-box loop (jumps counter, upgrade buttons, auto-toggle) ---
     boxData.forEach((b, i) => {
         const ce = b.cachedElements;
         if (!ce) return;
@@ -578,17 +680,7 @@ function updateUI() {
         const targetJumps = getPrestigeTarget(b.prestige);
 
         if (ce.jumpContainer) {
-            if (b.prestige >= 10) {
-                if (!ce.jumpContainer.classList.contains('prestige-ready')) {
-                    ce.jumpContainer.className = "jumps-counter prestige-ready";
-                    ce.jumpContainer.onclick = () => evolveBox(i);
-                }
-                if (ce.jumpText && ce.jumpText.innerHTML !== `EVOLVE`) {
-                    ce.jumpText.innerHTML = `EVOLVE`;
-                }
-                if (ce.jumpFill) ce.jumpFill.style.width = "0%";
-            } 
-            else if (b.jumps >= targetJumps) {
+            if (b.jumps >= targetJumps) {
                 if (!ce.jumpContainer.classList.contains('prestige-ready')) {
                     ce.jumpContainer.className = "jumps-counter prestige-ready";
                     ce.jumpContainer.onclick = () => openPrestigeModal(i);
@@ -623,11 +715,12 @@ function updateUI() {
                 else ce.upIncBtn.classList.remove('disabled-btn');
                 
                 const evolutionMult = Math.pow(25, b.evolution || 0);
-                const currentTotalValue = Math.floor(b.inc * prestigeMult * evolutionMult * cardMults.value * talentValueMult);
+                const baseIncBonus = talents.baseIncome.level;
+                const currentTotalValue = Math.floor((b.inc + baseIncBonus) * prestigeMult * evolutionMult * cardMults.value * talentValueMult);
                 const upgradeIncrease = Math.floor(b.baseInc * prestigeMult * evolutionMult * cardMults.value * talentValueMult);
                 
-                if (ce.upIncTitle) ce.upIncTitle.innerText = `Value (+$${currentTotalValue.toLocaleString()})`;
-                if (ce.upIncCost) ce.upIncCost.innerHTML = `$${b.incCost.toLocaleString()} <span style="color:var(--text-dim); font-size:0.7rem;">| +$${upgradeIncrease.toLocaleString()}</span>`;
+                if (ce.upIncTitle) ce.upIncTitle.innerText = `Value (+$${fmt(currentTotalValue)})`;
+                if (ce.upIncCost) ce.upIncCost.innerHTML = `$${fmt(b.incCost)} <span style="color:var(--text-dim); font-size:0.7rem;">| +$${fmt(upgradeIncrease)}</span>`;
             }
 
             if (ce.upDurBtn) {
@@ -638,7 +731,7 @@ function updateUI() {
                 const displayDur = b.dur / cardMults.speed;
                 if (ce.upDurCost) {
                     if (isMaxDur && cardMults.speed === 1) ce.upDurCost.innerText = 'MAX SPEED';
-                    else ce.upDurCost.innerHTML = `$${b.durCost.toLocaleString()} <span style="color:var(--text-dim); font-size:0.7rem;">| ${displayDur.toFixed(2)}s</span>`;
+                    else ce.upDurCost.innerHTML = `$${fmt(b.durCost)} <span style="color:var(--text-dim); font-size:0.7rem;">| ${displayDur.toFixed(2)}s</span>`;
                 }
             }
 
@@ -650,7 +743,19 @@ function updateUI() {
                 const displayAuto = b.auto / cardMults.auto;
                 if (ce.upAutoCost) {
                     if (isMaxAuto && cardMults.auto === 1) ce.upAutoCost.innerText = 'MAX SPEED';
-                    else ce.upAutoCost.innerHTML = `$${b.autoCost.toLocaleString()} <span style="color:var(--text-dim); font-size:0.7rem;">| ${b.auto === 0 ? 'OFF' : (displayAuto/1000).toFixed(2)+'s'}</span>`;
+                    else ce.upAutoCost.innerHTML = `$${fmt(b.autoCost)} <span style="color:var(--text-dim); font-size:0.7rem;">| ${b.auto === 0 ? 'OFF' : (displayAuto/1000).toFixed(2)+'s'}</span>`;
+                }
+            }
+
+            if (ce.upEvolveBtn) {
+                const evolveCost = getEvolveCost(i);
+                const canEvolve = money >= evolveCost;
+                if (canEvolve) ce.upEvolveBtn.classList.remove('disabled-btn');
+                else ce.upEvolveBtn.classList.add('disabled-btn');
+                if (ce.upEvolveCost) ce.upEvolveCost.innerText = `$${fmt(evolveCost)}`;
+                if (ce.upEvolveFill) {
+                    const pct = Math.min(100, (money / evolveCost) * 100);
+                    ce.upEvolveFill.style.width = `${pct}%`;
                 }
             }
 

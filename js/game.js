@@ -21,6 +21,10 @@ function getPrestigeTarget(prestigeLevel) {
     return Math.floor(1000 * Math.pow(1.1, prestigeLevel));
 }
 
+function getEvolveCost(idx) {
+    return EVOLVE_BASE_COSTS[idx] * Math.pow(10, boxData[idx].evolution || 0);
+}
+
 // ============================================================
 // GOLDEN FRENZY EVENT
 // ============================================================
@@ -30,7 +34,7 @@ function getSingleBoxValue(b) {
     const talentValueMult = 1 + (talents.globalValue.level * 0.15);
     const prestigeMult = Math.pow(1.5, b.prestige);
     const evolutionMult = Math.pow(25, b.evolution || 0);
-    return Math.floor(b.inc * prestigeMult * evolutionMult * cardMults.value * talentValueMult);
+    return Math.floor((b.inc + talents.baseIncome.level) * prestigeMult * evolutionMult * cardMults.value * talentValueMult);
 }
 
 function getTotalBoxValue() {
@@ -120,7 +124,7 @@ function catchGoldenRunner(runnerEl) {
                     const floatEl = document.createElement('div');
                     floatEl.className = 'float-text';
                     floatEl.style.color = 'var(--high-jump)';
-                    floatEl.innerText = `+$${rewardPerBox.toLocaleString()}`;
+                    floatEl.innerText = `+$${fmt(rewardPerBox)}`;
 
                     tempWrapper.appendChild(floatEl);
 
@@ -152,7 +156,9 @@ function catchGoldenRunner(runnerEl) {
     }, 800);
 }
 
-// --- INITIALIZATION ---
+// ============================================================
+// INITIALIZATION & GAME LOOP
+// ============================================================
 document.addEventListener('DOMContentLoaded', () => {
     init();
 });
@@ -164,6 +170,14 @@ function init() {
     updateUI();
     renderTalents();
     requestAnimationFrame(gameLoop);
+
+    const moneyHeading = document.getElementById('total-money');
+    if (moneyHeading && 'IntersectionObserver' in window) {
+        new IntersectionObserver(([entry]) => {
+            document.getElementById('sticky-money-bar')
+                ?.classList.toggle('visible', !entry.isIntersecting);
+        }, { threshold: 0 }).observe(moneyHeading);
+    }
 
     setInterval(saveGame, 10000);
     setInterval(() => {
@@ -195,13 +209,31 @@ function gameLoop(currentTime) {
             b.autoProgress += dt / actualAutoSpeed;
 
             if (b.autoProgress >= 1) {
-                jump(idx, true);
+                const el = b.cachedElements.box;
+                if (talents.jumpQueue.level > 0 && el && el.classList.contains('is-jumping')) {
+                    b.jumpQueued = true;
+                } else {
+                    jump(idx, true);
+                }
                 b.autoProgress %= 1;
             }
 
             if (b.cachedElements && b.cachedElements.autoFill) {
                 b.cachedElements.autoFill.style.width = `${b.autoProgress * 100}%`;
             }
+            if (b.cachedElements && b.cachedElements.autoRing) {
+                const ring = b.cachedElements.autoRing;
+                const fill = b.cachedElements.autoRingFill;
+                ring.style.display = '';
+                const queued = !!b.jumpQueued;
+                ring.classList.toggle('queued', queued);
+                if (fill) {
+                    const circumference = 47.12; // 2π × 7.5
+                    fill.style.strokeDashoffset = queued ? 0 : circumference * (1 - b.autoProgress);
+                }
+            }
+        } else if (b.cachedElements && b.cachedElements.autoRing) {
+            b.cachedElements.autoRing.style.display = 'none';
         }
     });
 
@@ -216,21 +248,30 @@ function gameLoop(currentTime) {
         if (ghostFill) ghostFill.style.width = `${ghostBoxData.progress * 100}%`;
     }
 
-    if (synergyChainRaw > 0 && Date.now() - synergyChainLastTime > CHAIN_DECAY_MS) {
-        synergyChainRaw = 0;
+    if (synergyChainRaw > 0) {
+        const timeSince = Date.now() - synergyChainLastTime;
+        if (timeSince > CHAIN_DECAY_MS) {
+            const steps = Math.floor(timeSince / CHAIN_DECAY_MS);
+            synergyChainRaw = Math.max(0, synergyChainRaw - steps);
+            synergyChainLastTime += steps * CHAIN_DECAY_MS;
+        }
     }
 
     updateUI();
     requestAnimationFrame(gameLoop);
 }
 
-function getTalentCost(key) { 
-    return Math.floor(talents[key].baseCost * Math.pow(talents[key].costMult, talents[key].level)); 
+// ============================================================
+// TALENTS & AUTO-BOT TOGGLE
+// ============================================================
+function getTalentCost(key) {
+    return Math.floor(talents[key].baseCost * Math.pow(talents[key].costMult, talents[key].level));
 }
 
 function buyTalent(key) {
-    const t = talents[key]; 
+    const t = talents[key];
     const cost = getTalentCost(key);
+    if (t.requires && talents[t.requires].level < 1) return;
     if (prestigeTokens >= cost && t.level < t.maxLevel) {
         prestigeTokens -= cost;
         t.level += 1;
@@ -247,6 +288,9 @@ function toggleAutoBot(idx) {
     saveGame();
 }
 
+// ============================================================
+// JUMP MECHANICS  (synergy detection, chain, income, animation)
+// ============================================================
 function jump(idx, isAuto) {
     const b = boxData[idx];
     const el = document.getElementById(`box-${idx}`);
@@ -261,7 +305,8 @@ function jump(idx, isAuto) {
     let multiplier = 1;
     let isSynergyFound = false;
 
-    const synergyWindow = 50 + (talents.synergy.level * 25);
+    const tightWindow = 50 + (talents.synergy.level * 25);
+    const relaxedWindow = 200 + (talents.synergy.level * 50);
 
     activeJumps.forEach(tj => {
         let isAdjacent = Math.abs(idx - tj.idx) === 1;
@@ -272,7 +317,11 @@ function jump(idx, isAuto) {
             }
         }
 
-        if (Math.abs(now - tj.time) < (idx === 0 && tj.idx === 'ghost' ? synergyWindow + 25 : synergyWindow) && isAdjacent) {
+        const bothAuto = isAuto && tj.isAuto;
+        const baseWindow = bothAuto ? tightWindow : relaxedWindow;
+        const effectiveWindow = (idx === 0 && tj.idx === 'ghost') ? baseWindow + 25 : baseWindow;
+
+        if (Math.abs(now - tj.time) < effectiveWindow && isAdjacent) {
             isSynergyFound = true;
 
             if (!tj.hadSynergy) {
@@ -344,15 +393,16 @@ function jump(idx, isAuto) {
         }
     }
 
-    const amountEarned = Math.floor(b.inc * prestigeMult * evolutionMult * multiplier * cardMults.value * talentValueMult);
+    const amountEarned = Math.floor((b.inc + talents.baseIncome.level) * prestigeMult * evolutionMult * multiplier * cardMults.value * talentValueMult);
     money += amountEarned;
 
     b.totalIncome = (b.totalIncome || 0) + amountEarned;
     if (amountEarned > (b.bestJump || 0)) b.bestJump = amountEarned;
+    b.lifetimeJumps = (b.lifetimeJumps || 0) + 1;
 
-    const amountNoSynergy = Math.floor(b.inc * prestigeMult * evolutionMult * (isHighJump ? 2 : 1) * cardMults.value * talentValueMult);
-    activeJumps.push({ time: now, idx: idx, amountNoSynergy: amountNoSynergy, hadSynergy: isSynergyFound });
-    if (activeJumps.length > 20) activeJumps.shift();
+    const amountNoSynergy = Math.floor((b.inc + talents.baseIncome.level) * prestigeMult * evolutionMult * (isHighJump ? 2 : 1) * cardMults.value * talentValueMult);
+    activeJumps.push({ time: now, idx: idx, amountNoSynergy: amountNoSynergy, hadSynergy: isSynergyFound, isAuto: !!isAuto });
+    if (activeJumps.length > 50) activeJumps.shift();
 
     const targetJumps = getPrestigeTarget(b.prestige);
     if (b.jumps < targetJumps) b.jumps += 1;
@@ -378,9 +428,16 @@ function jump(idx, isAuto) {
     setTimeout(() => {
         el.classList.remove(animClass, 'is-jumping');
         el.style.transform = `rotate(${endRot}deg)`;
+        if (b.jumpQueued) {
+            b.jumpQueued = false;
+            jump(idx, true);
+        }
     }, actualJumpSpeed * 1000);
 }
 
+// ============================================================
+// PRESTIGE & EVOLUTION
+// ============================================================
 function prestigeBox(idx) {
     const b = boxData[idx];
     const targetJumps = getPrestigeTarget(b.prestige);
@@ -388,7 +445,7 @@ function prestigeBox(idx) {
     if (b.jumps >= targetJumps) {
         b.prestige += 1;
         b.jumps = 0;
-        prestigeTokens += 1;
+        prestigeTokens += 1 + talents.bonusTokens.level;
 
         b.inc = b.baseInc;
         b.incCost = b.baseIncCost;
@@ -418,41 +475,21 @@ function prestigeBox(idx) {
 
 function evolveBox(idx) {
     const b = boxData[idx];
-    if (b.prestige >= 10) {
-        const el = document.getElementById(`box-${idx}`);
-        if (el) {
-            el.classList.add('evolve-anim');
-            showSynergyFeedback(`💠 ${b.name} IS EVOLVING... 💠`, "var(--accent-1)");
-            
-            setTimeout(() => {
-                b.evolution = (b.evolution || 0) + 1;
-                b.prestige = 0;
-                b.jumps = 0;
+    const cost = getEvolveCost(idx);
+    if (money < cost) return;
 
-                b.inc = b.baseInc;
-                b.incCost = b.baseIncCost;
-                b.dur = b.baseDur;
-                b.durCost = b.baseDurCost;
-                b.auto = 0;
-                b.autoProgress = 0;
-                b.autoCost = b.baseAutoCost;
+    money -= cost;
 
-                updateCachedMultipliers(idx);
-                showSynergyFeedback(`💠 ${b.name} EVOLVED TO E${b.evolution}! 💠`, "var(--accent-1)");
-                
-                renderLayout();
-                updateUI();
-                saveGame();
+    const el = document.getElementById(`box-${idx}`);
+    if (el) {
+        el.classList.add('evolve-anim');
+        showSynergyFeedback(`💠 ${b.name} IS EVOLVING... 💠`, "var(--accent-1)");
 
-                // Particle explosion after re-render so we have the new box
-                const newBoxEl = document.getElementById(`box-${idx}`);
-                if (newBoxEl) spawnParticles(newBoxEl.parentElement, 'epic');
-            }, 1500); // Wait for evolveGlow animation
-        } else {
-            // Fallback if element not found
+        setTimeout(() => {
             b.evolution = (b.evolution || 0) + 1;
             b.prestige = 0;
             b.jumps = 0;
+
             b.inc = b.baseInc;
             b.incCost = b.baseIncCost;
             b.dur = b.baseDur;
@@ -460,15 +497,39 @@ function evolveBox(idx) {
             b.auto = 0;
             b.autoProgress = 0;
             b.autoCost = b.baseAutoCost;
+
             updateCachedMultipliers(idx);
             showSynergyFeedback(`💠 ${b.name} EVOLVED TO E${b.evolution}! 💠`, "var(--accent-1)");
+
             renderLayout();
             updateUI();
             saveGame();
-        }
+
+            const newBoxEl = document.getElementById(`box-${idx}`);
+            if (newBoxEl) spawnParticles(newBoxEl.parentElement, 'epic');
+        }, 1500);
+    } else {
+        b.evolution = (b.evolution || 0) + 1;
+        b.prestige = 0;
+        b.jumps = 0;
+        b.inc = b.baseInc;
+        b.incCost = b.baseIncCost;
+        b.dur = b.baseDur;
+        b.durCost = b.baseDurCost;
+        b.auto = 0;
+        b.autoProgress = 0;
+        b.autoCost = b.baseAutoCost;
+        updateCachedMultipliers(idx);
+        showSynergyFeedback(`💠 ${b.name} EVOLVED TO E${b.evolution}! 💠`, "var(--accent-1)");
+        renderLayout();
+        updateUI();
+        saveGame();
     }
 }
 
+// ============================================================
+// BOX UPGRADES & UNLOCK
+// ============================================================
 function buyUp(idx, type) {
     const b = boxData[idx];
     const btn = type === 'inc' ? b.cachedElements.upIncBtn : (type === 'dur' ? b.cachedElements.upDurBtn : b.cachedElements.upAutoBtn);
@@ -526,15 +587,22 @@ function unlockBox(idx) {
     }
 }
 
+
+// ============================================================
+// GHOST BOX  (helpers, unlock, upgrades, jump)
+// Note: getGhostBoxInterval / getGhostBoxValueMult / getGhostBoxSynergyCooldown
+// also exist in constants.js — game.js versions take precedence (loaded later).
+// ============================================================
 function getGhostBoxInterval() {
-    return 3000 / (1 + ghostBoxData.levelSpeed * 0.25);
+    return Math.max(200, 3000 / (1 + ghostBoxData.levelSpeed * 0.25));
 }
 function getGhostBoxValueMult() {
     return 0.1 + (ghostBoxData.levelValue * 0.025);
 }
 function getGhostBoxSynergyCooldown() {
-    return 5000 - (ghostBoxData.levelSynergy * 500);
+    return Math.max(500, 5000 - (ghostBoxData.levelSynergy * 500));
 }
+const GHOST_SYNERGY_MAX_LEVEL = 9;
 function getGhostUpCost(type) {
     const levels = { 'speed': ghostBoxData.levelSpeed, 'value': ghostBoxData.levelValue, 'synergy': ghostBoxData.levelSynergy };
     const base = type === 'value' ? 500 : 300;
@@ -557,6 +625,10 @@ function buyGhostUp(type) {
     const cost = getGhostUpCost(type);
     const btn = ghostBoxData.cachedElements[`up${type.charAt(0).toUpperCase() + type.slice(1)}`];
 
+    if (type === 'synergy' && ghostBoxData.levelSynergy >= GHOST_SYNERGY_MAX_LEVEL) {
+        flashError(btn);
+        return;
+    }
     if (money >= cost) {
         money -= cost;
         if (type === 'speed') ghostBoxData.levelSpeed++;
@@ -576,6 +648,9 @@ function jumpGhost() {
     const totalVal = getTotalBoxValue();
     const amount = Math.max(1, Math.floor(totalVal * getGhostBoxValueMult()));
     money += amount;
+    ghostBoxData.totalIncome = (ghostBoxData.totalIncome || 0) + amount;
+    ghostBoxData.totalJumps = (ghostBoxData.totalJumps || 0) + 1;
+    if (amount > (ghostBoxData.bestJump || 0)) ghostBoxData.bestJump = amount;
 
     const ghostStartRot = ghostBoxData.rotation || 0;
     const ghostEndRot = ghostStartRot + 90;
@@ -595,7 +670,9 @@ function jumpGhost() {
     const synergyCooldown = getGhostBoxSynergyCooldown();
     if (now - ghostBoxData.lastSynergyTime >= synergyCooldown) {
         const lastJump = [...activeJumps].reverse().find(tj => tj.idx === 0);
-        const synergyWindow = 50 + (talents.synergy.level * 25) + 25;
+        const tightWindow = 50 + (talents.synergy.level * 25) + 25;
+        const relaxedWindow = 200 + (talents.synergy.level * 50) + 100;
+        const synergyWindow = (lastJump && !lastJump.isAuto) ? relaxedWindow : tightWindow;
 
         if (lastJump && Math.abs(now - lastJump.time) < synergyWindow) {
             ghostBoxData.lastSynergyTime = now;
@@ -604,6 +681,8 @@ function jumpGhost() {
             const synBonus = 2;
             const extra = amount * (synBonus - 1);
             money += extra;
+            ghostBoxData.totalIncome = (ghostBoxData.totalIncome || 0) + extra;
+            if (amount + extra > ghostBoxData.bestJump) ghostBoxData.bestJump = amount + extra;
 
             if (!lastJump.hadSynergy) {
                 lastJump.hadSynergy = true;
@@ -635,8 +714,8 @@ function jumpGhost() {
     }
 
     createFloatingText('ghost', amount, isSynergyFound, false);
-    activeJumps.push({ time: now, idx: 'ghost', amountNoSynergy: amount, hadSynergy: isSynergyFound });
-    if (activeJumps.length > 20) activeJumps.shift();
+    activeJumps.push({ time: now, idx: 'ghost', amountNoSynergy: amount, hadSynergy: isSynergyFound, isAuto: true });
+    if (activeJumps.length > 50) activeJumps.shift();
 }
 
 document.addEventListener('keydown', function(event) {

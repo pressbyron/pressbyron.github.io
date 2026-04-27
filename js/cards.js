@@ -193,12 +193,12 @@ function renderInventory() {
         const canAfford = money >= displayCost;
         btn.disabled = !canAfford;
         if (!canAfford) btn.classList.add('disabled-btn'); else btn.classList.remove('disabled-btn');
-        btn.innerHTML = `Draw Card <span style="color:var(--bg); font-family:var(--font-mono); font-size:1rem; margin-left:5px;">$${displayCost.toLocaleString()}</span>`;
+        btn.innerHTML = `Draw Card <span style="color:var(--bg); font-family:var(--font-mono); font-size:1rem; margin-left:5px;">$${fmt(displayCost)}</span>`;
     }
 
     // Targeted draw chips
     const tdCostEl = document.getElementById('targeted-draw-cost');
-    if (tdCostEl) tdCostEl.innerText = selectedTargetType ? `$${targetedCost.toLocaleString()} (3×)` : `$${targetedCost.toLocaleString()}`;
+    if (tdCostEl) tdCostEl.innerText = selectedTargetType ? `$${fmt(targetedCost)} (3×)` : `$${fmt(targetedCost)}`;
     ['value', 'speed', 'auto', 'synergy'].forEach(type => {
         const chip = document.getElementById(`target-chip-${type}`);
         if (!chip) return;

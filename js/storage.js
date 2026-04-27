@@ -12,7 +12,7 @@ let pitySinceLastEpic = 0;
 function saveGame() {
     if (isWiping) return;
     const boxProgress = boxData.map(b => ({
-        active: b.active, jumps: b.jumps, prestige: b.prestige, evolution: b.evolution, totalIncome: b.totalIncome, bestJump: b.bestJump, equippedCard: b.equippedCard,
+        active: b.active, jumps: b.jumps, lifetimeJumps: b.lifetimeJumps, prestige: b.prestige, evolution: b.evolution, totalIncome: b.totalIncome, bestJump: b.bestJump, equippedCard: b.equippedCard,
         inc: b.inc, incCost: b.incCost, dur: b.dur, durCost: b.durCost,
         auto: b.auto, autoProgress: b.autoProgress, autoCost: b.autoCost,
         collapsed: b.collapsed, rotation: b.rotation, autoEnabled: b.autoEnabled
@@ -56,7 +56,7 @@ function loadGame() {
             if (data.boxProgress) {
                 data.boxProgress.forEach((savedBox, i) => {
                     if (boxData[i]) {
-                        const fieldsToLoad = ['active', 'jumps', 'prestige', 'evolution', 'totalIncome', 'bestJump', 'inc', 'incCost', 'dur', 'durCost', 'auto', 'autoProgress', 'autoCost', 'collapsed', 'rotation', 'autoEnabled'];
+                        const fieldsToLoad = ['active', 'jumps', 'lifetimeJumps', 'prestige', 'evolution', 'totalIncome', 'bestJump', 'inc', 'incCost', 'dur', 'durCost', 'auto', 'autoProgress', 'autoCost', 'collapsed', 'rotation', 'autoEnabled'];
                         fieldsToLoad.forEach(field => {
                             if (savedBox[field] !== undefined) boxData[i][field] = savedBox[field];
                         });
