@@ -143,6 +143,8 @@ function renderTalents() {
                 ${fork}
                 <div class="tier two-col">${nodeHTML('synergy')}${nodeHTML('frenzyFinder')}</div>
                 ${singleLeft}
+                <div class="tier two-col">${nodeHTML('jumpPrestige')}<div class="tier-gap"></div></div>
+                ${singleLeft}
                 <div class="tier two-col">${nodeHTML('autoControl')}<div class="tier-gap"></div></div>
             </div>
             <div class="branch-sep"></div>
@@ -159,6 +161,87 @@ function renderTalents() {
         </div>`;
 }
 
+// ============================================================
+// SHOP UPGRADES ROW
+// ============================================================
+let selectedUpgradeId = null;
+
+const UP_ICONS  = { valuePct:'$', flatIncome:'+', speedPct:'⚡', autoPct:'⟳', synergyMs:'◎', synergyBonus:'✦', chainBonus:'⛓', ghostValue:'👻' };
+const UP_COLORS = { valuePct:'#4ade80', flatIncome:'#fbbf24', speedPct:'#60a5fa', autoPct:'#a78bfa', synergyMs:'#fb923c', synergyBonus:'#f472b6', chainBonus:'#06b6d4', ghostValue:'#94a3b8' };
+
+function upValStr(up) {
+    if (up.effect === 'flatIncome') return `+${up.value}`;
+    if (up.effect === 'synergyMs')  return `+${up.value}ms`;
+    if (up.effect === 'synergyBonus' || up.effect === 'chainBonus') return `+${up.value}x`;
+    return `+${up.value}%`;
+}
+
+function showSupTip(id, tileEl) {
+    const tooltip = document.getElementById('sup-tooltip');
+    const up = SHOP_UPGRADES.find(u => u.id === id);
+    if (!tooltip || !up) return;
+    const color = UP_COLORS[up.effect] || '#94a3b8';
+    const canAfford = money >= up.cost;
+    const isSelected = selectedUpgradeId === id;
+    tooltip.innerHTML = `
+        <strong style="color:${color}">${up.name}</strong>
+        <span class="sup-tt-desc">${up.desc}</span>
+        <span class="sup-tt-cost" style="color:${canAfford ? '#4ade80' : '#ef4444'}">$${fmt(up.cost)}</span>
+        ${isSelected ? `<span class="sup-tt-hint">${canAfford ? '↑ tap again to buy' : '↑ not enough money'}</span>` : ''}`;
+    tooltip.style.display = 'flex';
+    const rect = tileEl.getBoundingClientRect();
+    const tw = 170, th = tooltip.offsetHeight || 80;
+    let top = rect.top - th - 10;
+    if (top < 8) top = rect.bottom + 10;
+    let left = rect.left + rect.width / 2 - tw / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - tw - 8));
+    tooltip.style.top  = top + 'px';
+    tooltip.style.left = left + 'px';
+}
+
+function hideSupTip(force) {
+    if (!force && selectedUpgradeId) return;
+    const tooltip = document.getElementById('sup-tooltip');
+    if (tooltip) tooltip.style.display = 'none';
+}
+
+function renderShopUpgrades() {
+    const row = document.getElementById('shop-upgrades-row');
+    if (!row) return;
+    row.innerHTML = '';
+    for (const up of SHOP_UPGRADES) {
+        if (boughtUpgrades.includes(up.id)) continue;
+        const affordable = money >= up.cost;
+        const selected   = selectedUpgradeId === up.id;
+        const color      = UP_COLORS[up.effect] || '#94a3b8';
+        const tile = document.createElement('div');
+        tile.className = 'sup-tile' + (affordable ? ' affordable' : '') + (selected ? ' selected' : '');
+        tile.dataset.id = up.id;
+        tile.style.setProperty('--tile-color', color);
+        tile.setAttribute('onmouseenter', `showSupTip('${up.id}', this)`);
+        tile.setAttribute('onmouseleave', `hideSupTip(false)`);
+        tile.setAttribute('onclick', `handleSupClick('${up.id}', this)`);
+        tile.innerHTML = `<div class="sup-icon">${UP_ICONS[up.effect] || '?'}</div><div class="sup-val">${upValStr(up)}</div>`;
+        row.appendChild(tile);
+    }
+}
+
+function handleSupClick(id, tileEl) {
+    if (boughtUpgrades.includes(id)) return;
+    if (window.matchMedia('(hover: hover)').matches) {
+        buyShopUpgrade(id);
+        return;
+    }
+    // touch: first tap = show tooltip, second tap = buy
+    if (selectedUpgradeId === id) {
+        buyShopUpgrade(id);
+        return;
+    }
+    selectedUpgradeId = id;
+    document.querySelectorAll('.sup-tile').forEach(t => t.classList.toggle('selected', t.dataset.id === id));
+    showSupTip(id, tileEl);
+}
+
 function renderLayout() {
     const stage = document.getElementById('stage');
     const upgrades = document.getElementById('upgrades-container');
@@ -169,6 +252,7 @@ function renderLayout() {
 
     upgrades.innerHTML = '';
     lastMoney = -1;
+    renderShopUpgrades();
 
     if (ghostBoxData.active) {
         const ghostWrapper = document.createElement('div');
@@ -207,7 +291,7 @@ function renderLayout() {
             </div>
             <div id="ghost-ups" style="display:${ghostBoxData.collapsed ? 'none' : 'flex'}; flex-direction:column; margin-top:2px;">
                 <button id="up-ghost-value" class="btn-tactile up-btn" onclick="buyGhostUp('value')">
-                    <div>Ghost Value</div>
+                    <div id="title-ghost-value">Ghost Value</div>
                     <div id="cost-ghost-value">$0</div>
                 </button>
                 <button id="up-ghost-synergy" class="btn-tactile up-btn" onclick="buyGhostUp('synergy')">
@@ -333,8 +417,10 @@ function renderLayout() {
             b.cachedElements.upIncTitle = document.getElementById(`up-inc-title-${idx}`);
             b.cachedElements.upIncCost = document.getElementById(`up-inc-cost-${idx}`);
             b.cachedElements.upDurBtn = document.getElementById(`up-dur-${idx}`);
+            b.cachedElements.upDurTitle = document.getElementById(`up-dur-title-${idx}`);
             b.cachedElements.upDurCost = document.getElementById(`up-dur-cost-${idx}`);
             b.cachedElements.upAutoBtn = document.getElementById(`up-auto-${idx}`);
+            b.cachedElements.upAutoTitle = document.getElementById(`up-auto-title-${idx}`);
             b.cachedElements.upAutoCost = document.getElementById(`up-auto-cost-${idx}`);
             b.cachedElements.autoFill = b.collapsed ? document.getElementById(`auto-fill-mini-${idx}`) : document.getElementById(`auto-fill-${idx}`);
             b.cachedElements.autoToggleBtn = document.getElementById(`auto-toggle-${idx}`);
@@ -486,6 +572,11 @@ function updateUI() {
         const stickyText = document.getElementById('sticky-money-text');
         if (stickyText) stickyText.innerText = "$" + moneyStr;
         lastMoney = moneyFloor;
+
+        document.querySelectorAll('.sup-tile').forEach(tile => {
+            const up = SHOP_UPGRADES.find(u => u.id === tile.dataset.id);
+            if (up) tile.classList.toggle('affordable', money >= up.cost);
+        });
     }
     
     const btnTokensEl = document.getElementById('btn-tokens');
@@ -614,8 +705,13 @@ function updateUI() {
             const cost = getGhostUpCost('value');
             if (money < cost) upValue.classList.add('disabled-btn');
             else upValue.classList.remove('disabled-btn');
+            const ghostUpgradeMult = 1 + upgradeEffects.ghostValue / 100;
+            const effectivePct = (getGhostBoxValueMult() * ghostUpgradeMult * 100).toFixed(0);
+            const deltaPct = (0.10 * ghostUpgradeMult * 100).toFixed(0);
+            const titleGhostValue = document.getElementById('title-ghost-value');
+            if (titleGhostValue) titleGhostValue.innerText = `Ghost Value (${effectivePct}%)`;
             const costGhostValue = document.getElementById('cost-ghost-value');
-            if (costGhostValue) costGhostValue.innerHTML = `$${fmt(cost)} <span style="color:var(--text-dim); font-size:0.7rem;">| ${(getGhostBoxValueMult()*100).toFixed(0)}%</span>`;
+            if (costGhostValue) costGhostValue.innerHTML = `$${fmt(cost)} <span style="color:#60a5fa; font-size:0.7rem;">+${deltaPct}%</span>`;
         }
         const upSync = document.getElementById('up-ghost-synergy');
         if (upSync) {
@@ -646,7 +742,7 @@ function updateUI() {
         chainDecay.style.height = (timeLeft * chainPct) + '%';
         if (chainLabel) {
             chainLabel.textContent = chainLevel >= 1
-                ? `×${(1 + chainLevel * 0.25).toFixed(2)}`
+                ? `×${(1 + chainLevel * (0.25 + upgradeEffects.chainBonus)).toFixed(2)}`
                 : '⛓';
         }
         let chainColor, chainGlow;
@@ -694,12 +790,13 @@ function updateUI() {
                     ce.jumpContainer.className = "jumps-counter";
                     ce.jumpContainer.onclick = null;
                 }
-                const newText = `Jumps: ${b.jumps.toLocaleString()} / ${targetJumps.toLocaleString()}`;
+                const displayJumps = Math.floor(b.jumps);
+                const newText = `Jumps: ${displayJumps.toLocaleString()} / ${targetJumps.toLocaleString()}`;
                 if (ce.jumpText && ce.jumpText.innerText !== newText) {
                     ce.jumpText.innerText = newText;
                 }
                 if (ce.jumpFill) {
-                    const pct = Math.min(100, (b.jumps / targetJumps) * 100);
+                    const pct = Math.min(100, (displayJumps / targetJumps) * 100);
                     ce.jumpFill.style.width = `${pct}%`;
                 }
             }
@@ -713,25 +810,28 @@ function updateUI() {
             if (ce.upIncBtn) {
                 if (money < b.incCost) ce.upIncBtn.classList.add('disabled-btn');
                 else ce.upIncBtn.classList.remove('disabled-btn');
-                
-                const evolutionMult = Math.pow(25, b.evolution || 0);
+
+                const evolutionMult = Math.pow(8, b.evolution || 0);
                 const baseIncBonus = talents.baseIncome.level;
-                const currentTotalValue = Math.floor((b.inc + baseIncBonus) * prestigeMult * evolutionMult * cardMults.value * talentValueMult);
-                const upgradeIncrease = Math.floor(b.baseInc * prestigeMult * evolutionMult * cardMults.value * talentValueMult);
-                
-                if (ce.upIncTitle) ce.upIncTitle.innerText = `Value (+$${fmt(currentTotalValue)})`;
-                if (ce.upIncCost) ce.upIncCost.innerHTML = `$${fmt(b.incCost)} <span style="color:var(--text-dim); font-size:0.7rem;">| +$${fmt(upgradeIncrease)}</span>`;
+                const upgradeValueMult = 1 + upgradeEffects.valuePct / 100;
+                const currentTotalValue = Math.floor((b.inc + baseIncBonus + upgradeEffects.flatIncome) * prestigeMult * evolutionMult * cardMults.value * talentValueMult * upgradeValueMult);
+                const upgradeIncrease = Math.floor(b.baseInc * prestigeMult * evolutionMult * cardMults.value * talentValueMult * upgradeValueMult);
+
+                if (ce.upIncTitle) ce.upIncTitle.innerText = `Value ($${fmt(currentTotalValue)})`;
+                if (ce.upIncCost) ce.upIncCost.innerHTML = `$${fmt(b.incCost)} <span style="color:#60a5fa; font-size:0.7rem;">+$${fmt(upgradeIncrease)}</span>`;
             }
 
             if (ce.upDurBtn) {
                 const isMaxDur = b.dur <= b.minDur;
                 if (money < b.durCost || isMaxDur) ce.upDurBtn.classList.add('disabled-btn');
                 else ce.upDurBtn.classList.remove('disabled-btn');
-                
-                const displayDur = b.dur / cardMults.speed;
+
+                const speedMult = cardMults.speed * (1 + upgradeEffects.speedPct / 100);
+                const displayDur = b.dur / speedMult;
+                if (ce.upDurTitle) ce.upDurTitle.innerText = `Jump Speed (${displayDur.toFixed(2)}s)`;
                 if (ce.upDurCost) {
-                    if (isMaxDur && cardMults.speed === 1) ce.upDurCost.innerText = 'MAX SPEED';
-                    else ce.upDurCost.innerHTML = `$${fmt(b.durCost)} <span style="color:var(--text-dim); font-size:0.7rem;">| ${displayDur.toFixed(2)}s</span>`;
+                    if (isMaxDur) ce.upDurCost.innerText = 'MAX SPEED';
+                    else ce.upDurCost.innerHTML = `$${fmt(b.durCost)} <span style="color:#60a5fa; font-size:0.7rem;">-${(b.durStep / speedMult).toFixed(2)}s</span>`;
                 }
             }
 
@@ -740,10 +840,14 @@ function updateUI() {
                 if (money < b.autoCost || isMaxAuto) ce.upAutoBtn.classList.add('disabled-btn');
                 else ce.upAutoBtn.classList.remove('disabled-btn');
 
-                const displayAuto = b.auto / cardMults.auto;
+                const autoMult = cardMults.auto * (1 + upgradeEffects.autoPct / 100);
+                const displayAuto = b.auto > 0 ? b.auto / autoMult : 0;
+                const autoLabel = b.auto === 0 ? 'OFF' : `${(displayAuto / 1000).toFixed(2)}s`;
+                if (ce.upAutoTitle) ce.upAutoTitle.innerText = `Auto-Bot (${autoLabel})`;
                 if (ce.upAutoCost) {
-                    if (isMaxAuto && cardMults.auto === 1) ce.upAutoCost.innerText = 'MAX SPEED';
-                    else ce.upAutoCost.innerHTML = `$${fmt(b.autoCost)} <span style="color:var(--text-dim); font-size:0.7rem;">| ${b.auto === 0 ? 'OFF' : (displayAuto/1000).toFixed(2)+'s'}</span>`;
+                    if (isMaxAuto) ce.upAutoCost.innerText = 'MAX SPEED';
+                    else if (b.auto === 0) ce.upAutoCost.innerHTML = `$${fmt(b.autoCost)} <span style="color:#60a5fa; font-size:0.7rem;">→ ${(b.baseAutoStart / autoMult / 1000).toFixed(2)}s</span>`;
+                    else ce.upAutoCost.innerHTML = `$${fmt(b.autoCost)} <span style="color:#60a5fa; font-size:0.7rem;">-${(b.autoStep / autoMult / 1000).toFixed(2)}s</span>`;
                 }
             }
 

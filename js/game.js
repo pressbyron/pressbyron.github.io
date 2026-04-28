@@ -14,6 +14,30 @@ const CHAIN_DECAY_MS = 1500;
 const CHAIN_MAX = 10;
 const CHAIN_AUTO_WEIGHT = 0.3;
 
+let upgradeEffects = { flatIncome: 0, valuePct: 0, speedPct: 0, autoPct: 0, synergyMs: 0, synergyBonus: 0, chainBonus: 0, ghostValue: 0 };
+
+function recomputeUpgradeEffects() {
+    upgradeEffects = { flatIncome: 0, valuePct: 0, speedPct: 0, autoPct: 0, synergyMs: 0, synergyBonus: 0, chainBonus: 0, ghostValue: 0 };
+    for (const id of boughtUpgrades) {
+        const up = SHOP_UPGRADES.find(u => u.id === id);
+        if (up) upgradeEffects[up.effect] = (upgradeEffects[up.effect] || 0) + up.value;
+    }
+}
+
+function buyShopUpgrade(id) {
+    if (boughtUpgrades.includes(id)) return;
+    const up = SHOP_UPGRADES.find(u => u.id === id);
+    if (!up || money < up.cost) return;
+    money -= up.cost;
+    boughtUpgrades.push(id);
+    recomputeUpgradeEffects();
+    selectedUpgradeId = null;
+    hideSupTip(true);
+    const tile = document.querySelector(`.sup-tile[data-id="${id}"]`);
+    if (tile) tile.remove();
+    saveGame();
+}
+
 // ============================================================
 // VALUE HELPERS
 // ============================================================
@@ -22,7 +46,7 @@ function getPrestigeTarget(prestigeLevel) {
 }
 
 function getEvolveCost(idx) {
-    return EVOLVE_BASE_COSTS[idx] * Math.pow(10, boxData[idx].evolution || 0);
+    return EVOLVE_BASE_COSTS[idx] * Math.pow(50, boxData[idx].evolution || 0);
 }
 
 // ============================================================
@@ -33,8 +57,9 @@ function getSingleBoxValue(b) {
     const cardMults = getCardMultipliers(b);
     const talentValueMult = 1 + (talents.globalValue.level * 0.15);
     const prestigeMult = Math.pow(1.5, b.prestige);
-    const evolutionMult = Math.pow(25, b.evolution || 0);
-    return Math.floor((b.inc + talents.baseIncome.level) * prestigeMult * evolutionMult * cardMults.value * talentValueMult);
+    const evolutionMult = Math.pow(8, b.evolution || 0);
+    const upgradeValueMult = 1 + upgradeEffects.valuePct / 100;
+    return Math.floor((b.inc + talents.baseIncome.level + upgradeEffects.flatIncome) * prestigeMult * evolutionMult * cardMults.value * talentValueMult * upgradeValueMult);
 }
 
 function getTotalBoxValue() {
@@ -165,6 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function init() {
     loadGame();
+    recomputeUpgradeEffects();
 
     renderLayout();
     updateUI();
@@ -204,8 +230,8 @@ function gameLoop(currentTime) {
     }
 
     boxData.forEach((b, idx) => {
-        if (b.active && b.auto > 0 && b.autoEnabled !== false) {
-            const actualAutoSpeed = b.auto / b.cachedMults.auto;
+        if (b.active && !b.evolving && b.auto > 0 && b.autoEnabled !== false) {
+            const actualAutoSpeed = b.auto / b.cachedMults.auto / (1 + upgradeEffects.autoPct / 100);
             b.autoProgress += dt / actualAutoSpeed;
 
             if (b.autoProgress >= 1) {
@@ -293,6 +319,7 @@ function toggleAutoBot(idx) {
 // ============================================================
 function jump(idx, isAuto) {
     const b = boxData[idx];
+    if (b.evolving) return;
     const el = document.getElementById(`box-${idx}`);
     if (!el || el.classList.contains('is-jumping')) return;
 
@@ -300,13 +327,13 @@ function jump(idx, isAuto) {
     const cardMults = getCardMultipliers(b);
     const talentValueMult = 1 + (talents.globalValue.level * 0.15);
     const prestigeMult = Math.pow(1.5, b.prestige);
-    const evolutionMult = Math.pow(25, b.evolution || 0);
+    const evolutionMult = Math.pow(8, b.evolution || 0);
 
     let multiplier = 1;
     let isSynergyFound = false;
 
-    const tightWindow = 50 + (talents.synergy.level * 25);
-    const relaxedWindow = 200 + (talents.synergy.level * 50);
+    const tightWindow = 50 + (talents.synergy.level * 25) + upgradeEffects.synergyMs;
+    const relaxedWindow = 200 + (talents.synergy.level * 50) + upgradeEffects.synergyMs;
 
     activeJumps.forEach(tj => {
         let isAdjacent = Math.abs(idx - tj.idx) === 1;
@@ -329,7 +356,7 @@ function jump(idx, isAuto) {
 
                 if (tj.idx === 'ghost') {
                     ghostBoxData.lastSynergyTime = Date.now();
-                    const synBonus = 2;
+                    const synBonus = 2 + upgradeEffects.synergyBonus;
                     const extra = Math.floor(tj.amountNoSynergy * (synBonus - 1));
                     money += extra;
                     
@@ -343,7 +370,7 @@ function jump(idx, isAuto) {
                 } else {
                     const prevBox = boxData[tj.idx];
                     const prevCardMults = getCardMultipliers(prevBox);
-                    const prevSynergyBonus = (2 + prevCardMults.synergyBonus);
+                    const prevSynergyBonus = (2 + prevCardMults.synergyBonus + upgradeEffects.synergyBonus);
 
                     const extraAmount = Math.floor(tj.amountNoSynergy * (prevSynergyBonus - 1));
                     money += extraAmount;
@@ -368,9 +395,9 @@ function jump(idx, isAuto) {
         synergyChainRaw = Math.min(CHAIN_MAX, synergyChainRaw + (isAuto ? CHAIN_AUTO_WEIGHT : 1.0));
         synergyChainLastTime = now;
         const chainLevel = Math.floor(synergyChainRaw);
-        const chainMult = 1 + chainLevel * 0.25;
-        multiplier *= (2 + cardMults.synergyBonus) * chainMult;
-        showSynergyFeedback(`✨ SYNERGY! x${2+cardMults.synergyBonus} BONUS ✨`, "var(--synergy)");
+        const chainMult = 1 + chainLevel * (0.25 + upgradeEffects.chainBonus);
+        multiplier *= (2 + cardMults.synergyBonus + upgradeEffects.synergyBonus) * chainMult;
+        showSynergyFeedback(`✨ SYNERGY! x${(2+cardMults.synergyBonus+upgradeEffects.synergyBonus).toFixed(1)} BONUS ✨`, "var(--synergy)");
         el.style.setProperty('--glow-color', b.color);
         el.classList.add('synergy-glow');
         setTimeout(() => el.classList.remove('synergy-glow'), 550);
@@ -393,22 +420,24 @@ function jump(idx, isAuto) {
         }
     }
 
-    const amountEarned = Math.floor((b.inc + talents.baseIncome.level) * prestigeMult * evolutionMult * multiplier * cardMults.value * talentValueMult);
+    const upgradeValueMult = 1 + upgradeEffects.valuePct / 100;
+    const amountEarned = Math.floor((b.inc + talents.baseIncome.level + upgradeEffects.flatIncome) * prestigeMult * evolutionMult * multiplier * cardMults.value * talentValueMult * upgradeValueMult);
     money += amountEarned;
 
     b.totalIncome = (b.totalIncome || 0) + amountEarned;
     if (amountEarned > (b.bestJump || 0)) b.bestJump = amountEarned;
     b.lifetimeJumps = (b.lifetimeJumps || 0) + 1;
 
-    const amountNoSynergy = Math.floor((b.inc + talents.baseIncome.level) * prestigeMult * evolutionMult * (isHighJump ? 2 : 1) * cardMults.value * talentValueMult);
+    const amountNoSynergy = Math.floor((b.inc + talents.baseIncome.level + upgradeEffects.flatIncome) * prestigeMult * evolutionMult * (isHighJump ? 2 : 1) * cardMults.value * talentValueMult * upgradeValueMult);
     activeJumps.push({ time: now, idx: idx, amountNoSynergy: amountNoSynergy, hadSynergy: isSynergyFound, isAuto: !!isAuto });
     if (activeJumps.length > 50) activeJumps.shift();
 
     const targetJumps = getPrestigeTarget(b.prestige);
-    if (b.jumps < targetJumps) b.jumps += 1;
+    const jumpProgress = 1 + talents.jumpPrestige.level * 0.2;
+    if (b.jumps < targetJumps) b.jumps = Math.min(targetJumps, b.jumps + jumpProgress);
 
     const animClass = isHighJump ? 'high-jump-anim' : 'jump-anim';
-    const actualJumpSpeed = b.dur / cardMults.speed;
+    const actualJumpSpeed = b.dur / cardMults.speed / (1 + upgradeEffects.speedPct / 100);
     const startRot = b.rotation || 0;
     const endRot = startRot + (isHighJump ? 180 : 90);
     
@@ -482,21 +511,25 @@ function evolveBox(idx) {
 
     const el = document.getElementById(`box-${idx}`);
     if (el) {
+        b.evolving = true;
+        b.autoProgress = 0;
         el.classList.add('evolve-anim');
         showSynergyFeedback(`💠 ${b.name} IS EVOLVING... 💠`, "var(--accent-1)");
 
         setTimeout(() => {
+            b.evolving = false;
             b.evolution = (b.evolution || 0) + 1;
             b.prestige = 0;
             b.jumps = 0;
+            prestigeTokens += 2;
 
             b.inc = b.baseInc;
             b.incCost = b.baseIncCost;
             b.dur = b.baseDur;
-            b.durCost = b.baseDurCost;
+            b.durCost = Math.round(b.baseDurCost * Math.pow(5, b.evolution));
             b.auto = 0;
             b.autoProgress = 0;
-            b.autoCost = b.baseAutoCost;
+            b.autoCost = Math.round(b.baseAutoCost * Math.pow(5, b.evolution));
 
             updateCachedMultipliers(idx);
             showSynergyFeedback(`💠 ${b.name} EVOLVED TO E${b.evolution}! 💠`, "var(--accent-1)");
@@ -512,13 +545,14 @@ function evolveBox(idx) {
         b.evolution = (b.evolution || 0) + 1;
         b.prestige = 0;
         b.jumps = 0;
+        prestigeTokens += 2;
         b.inc = b.baseInc;
         b.incCost = b.baseIncCost;
         b.dur = b.baseDur;
-        b.durCost = b.baseDurCost;
+        b.durCost = Math.round(b.baseDurCost * Math.pow(5, b.evolution));
         b.auto = 0;
         b.autoProgress = 0;
-        b.autoCost = b.baseAutoCost;
+        b.autoCost = Math.round(b.baseAutoCost * Math.pow(5, b.evolution));
         updateCachedMultipliers(idx);
         showSynergyFeedback(`💠 ${b.name} EVOLVED TO E${b.evolution}! 💠`, "var(--accent-1)");
         renderLayout();
@@ -597,7 +631,7 @@ function getGhostBoxInterval() {
     return Math.max(200, 3000 / (1 + ghostBoxData.levelSpeed * 0.25));
 }
 function getGhostBoxValueMult() {
-    return 0.1 + (ghostBoxData.levelValue * 0.025);
+    return 0.1 + (ghostBoxData.levelValue * 0.10);
 }
 function getGhostBoxSynergyCooldown() {
     return Math.max(500, 5000 - (ghostBoxData.levelSynergy * 500));
@@ -646,7 +680,8 @@ function jumpGhost() {
     if (!el) return;
 
     const totalVal = getTotalBoxValue();
-    const amount = Math.max(1, Math.floor(totalVal * getGhostBoxValueMult()));
+    const ghostMult = getGhostBoxValueMult() * (1 + upgradeEffects.ghostValue / 100);
+    const amount = Math.max(1, Math.floor(totalVal * ghostMult));
     money += amount;
     ghostBoxData.totalIncome = (ghostBoxData.totalIncome || 0) + amount;
     ghostBoxData.totalJumps = (ghostBoxData.totalJumps || 0) + 1;
@@ -670,16 +705,16 @@ function jumpGhost() {
     const synergyCooldown = getGhostBoxSynergyCooldown();
     if (now - ghostBoxData.lastSynergyTime >= synergyCooldown) {
         const lastJump = [...activeJumps].reverse().find(tj => tj.idx === 0);
-        const tightWindow = 50 + (talents.synergy.level * 25) + 25;
-        const relaxedWindow = 200 + (talents.synergy.level * 50) + 100;
+        const tightWindow = 50 + (talents.synergy.level * 25) + upgradeEffects.synergyMs + 25;
+        const relaxedWindow = 200 + (talents.synergy.level * 50) + upgradeEffects.synergyMs + 100;
         const synergyWindow = (lastJump && !lastJump.isAuto) ? relaxedWindow : tightWindow;
 
         if (lastJump && Math.abs(now - lastJump.time) < synergyWindow) {
             ghostBoxData.lastSynergyTime = now;
             isSynergyFound = true;
 
-            const synBonus = 2;
-            const extra = amount * (synBonus - 1);
+            const synBonus = 2 + upgradeEffects.synergyBonus;
+            const extra = Math.floor(amount * (synBonus - 1));
             money += extra;
             ghostBoxData.totalIncome = (ghostBoxData.totalIncome || 0) + extra;
             if (amount + extra > ghostBoxData.bestJump) ghostBoxData.bestJump = amount + extra;

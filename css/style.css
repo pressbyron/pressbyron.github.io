@@ -490,6 +490,10 @@ body {
     border-radius: 12px;
     z-index: 5;
 }
+/* Match glow shape to evolved box shape */
+.box.evolution-1.synergy-glow::after { border-radius: 38%; }
+.box.evolution-2.synergy-glow::after { border-radius: 50%; }
+.box.evolution-3.synergy-glow::after { border-radius: 0; transform: rotate(45deg) scale(0.7); }
 
 .float-text {
     position: absolute; font-weight: 800; font-family: var(--font-mono); font-size: 1.1rem; pointer-events: none;
@@ -513,6 +517,45 @@ body {
     45%  { transform: translateY(-120px) scale(0.9, 1.1) rotate(var(--rot-peak, 180deg)); }
     100% { transform: translateY(0)     scale(1,   1)   rotate(var(--rot-end,   360deg)); }
 }
+
+/* Shop Upgrades Row */
+#shop-upgrades-wrap { width: 100%; padding: 6px 0 2px; }
+#shop-upgrades-row {
+    display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 6px; padding: 6px 8px;
+    scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+    -webkit-overflow-scrolling: touch;
+}
+#shop-upgrades-row::-webkit-scrollbar { height: 3px; }
+#shop-upgrades-row::-webkit-scrollbar-track { background: transparent; }
+#shop-upgrades-row::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.sup-tile {
+    flex-shrink: 0; width: 76px; height: 56px; border-radius: 8px; cursor: pointer;
+    border: 2px solid var(--border); background: var(--surface);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    user-select: none;
+}
+.sup-tile .sup-icon { font-size: 1.1rem; line-height: 1; color: var(--tile-color, #94a3b8); }
+.sup-tile .sup-val { font-size: 0.58rem; font-family: var(--font-mono); color: var(--text-dim); }
+.sup-tile:not(.affordable):not(.selected) { opacity: 0.32; }
+.sup-tile.affordable { border-color: var(--tile-color, var(--border)); box-shadow: 0 0 8px -1px var(--tile-color, transparent); }
+.sup-tile.selected { border-color: var(--tile-color, var(--border)); background: color-mix(in srgb, var(--tile-color) 14%, var(--surface)); box-shadow: 0 0 12px -1px var(--tile-color, transparent); }
+.sup-tile:active { transform: scale(0.93); }
+
+/* Global fixed tooltip (no overflow clipping) */
+#sup-tooltip {
+    position: fixed; display: none; z-index: 600;
+    flex-direction: column; gap: 4px;
+    background: rgba(17, 24, 39, 0.92);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
+    padding: 10px 13px; width: 170px; pointer-events: none;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+#sup-tooltip strong { font-size: 0.76rem; display: block; }
+#sup-tooltip .sup-tt-desc { font-size: 0.65rem; color: var(--text-dim); line-height: 1.35; }
+#sup-tooltip .sup-tt-cost { font-family: var(--font-mono); font-size: 0.68rem; margin-top: 2px; }
+#sup-tooltip .sup-tt-hint { font-size: 0.6rem; color: var(--text-dim); opacity: 0.6; margin-top: 1px; }
 
 /* Upgrade Columns */
 .upgrades-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; padding-bottom: 10px; width: 100%; }

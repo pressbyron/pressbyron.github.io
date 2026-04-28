@@ -8,6 +8,7 @@ let hasSeenSynergyTutorial = false;
 let hasSeenCardTutorial = false;
 let pitySinceLastRare = 0;
 let pitySinceLastEpic = 0;
+let boughtUpgrades = [];
 
 function saveGame() {
     if (isWiping) return;
@@ -18,7 +19,7 @@ function saveGame() {
         collapsed: b.collapsed, rotation: b.rotation, autoEnabled: b.autoEnabled
     }));
 
-    const saveData = { money, prestigeTokens, nextCardId, cards, talents, boxProgress, frenzyTimer, hasSeenSynergyTutorial, hasSeenCardTutorial, cardDust, ghostBoxData: { ...ghostBoxData }, pitySinceLastRare, pitySinceLastEpic };
+    const saveData = { money, prestigeTokens, nextCardId, cards, talents, boxProgress, frenzyTimer, hasSeenSynergyTutorial, hasSeenCardTutorial, cardDust, ghostBoxData: { ...ghostBoxData }, pitySinceLastRare, pitySinceLastEpic, boughtUpgrades };
     localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
 }
 
@@ -36,6 +37,7 @@ function loadGame() {
             cardDust = data.cardDust || 0;
             pitySinceLastRare = data.pitySinceLastRare || 0;
             pitySinceLastEpic = data.pitySinceLastEpic || 0;
+            boughtUpgrades = data.boughtUpgrades || [];
             if (data.ghostBoxData) {
                 ghostBoxData = { ...ghostBoxData, ...data.ghostBoxData };
             }
