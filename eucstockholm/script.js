@@ -37,7 +37,7 @@ const observer = new IntersectionObserver(
 );
 
 document.querySelectorAll(
-  '.feature, .badge, .visual-card, .faq__item, .gallery__item, .pricing__card, .pricing__aside, .honest-box'
+  '.feat-item, .visual-card, .faq__item, .gallery__item, .pricing__card, .pricing__aside, .honest-box'
 ).forEach(el => {
   el.classList.add('fade-up');
   observer.observe(el);
