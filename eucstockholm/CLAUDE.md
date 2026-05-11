@@ -34,7 +34,7 @@ In `index.html`, find the `<!-- GALLERY NOTE -->` comment inside `#galleri`.
 Replace each `.gallery__item--placeholder` div with:
 ```html
 <div class="gallery__item">
-  <img src="photos/event1.jpg" alt="Deltagare på elhjul" loading="lazy" />
+  <img src="photos/event1.jpg" alt="Deltagare på elektrisk enhjuling" loading="lazy" />
 </div>
 ```
 Put images in a `photos/` folder at the repo root. The CSS handles
