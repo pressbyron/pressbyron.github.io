@@ -88,12 +88,13 @@
       50%       { opacity: 0.9; }
     }
 
-    /* ── Video (iframe) ── */
+    /* ── Video ── */
     #player {
       position: fixed;
       inset: 0;
       width: 100%;
       height: 100%;
+      object-fit: cover;
       background: #000;
       border: none;
       opacity: 0;
@@ -107,13 +108,14 @@
 </head>
 <body>
 
-  <iframe
+  <video
     id="player"
-    src="https://drive.google.com/file/d/1WyEi-doqGnyE7vsjJu4NvOyYZGKh6GwJ/preview"
-    allow="autoplay; fullscreen"
-    allowfullscreen
-    frameborder="0"
-  ></iframe>
+    src="https://www.dropbox.com/scl/fi/uza875hpf7fvpfhf67zf5/morsdag.mov?rlkey=rmn09tz3a5ortlbq5q509x16j&st=ptsz7qo0&raw=1"
+    playsinline
+    webkit-playsinline
+    autoplay
+    preload="auto"
+  ></video>
 
   <div id="splash" onclick="startVideo()">
     <div class="pulse-ring">
@@ -126,7 +128,7 @@
   <script>
     async function startVideo() {
       const splash = document.getElementById('splash');
-      const player = document.getElementById('player');
+      const video  = document.getElementById('player');
 
       // 1. Begär helskärm
       const el = document.documentElement;
@@ -136,8 +138,9 @@
         else if (el.mozRequestFullScreen)     el.mozRequestFullScreen();
       } catch(e) {}
 
-      // 2. Visa iframen
-      player.classList.add('visible');
+      // 2. Spela videon
+      video.play().catch(() => {});
+      video.classList.add('visible');
 
       // 3. Göm splash
       splash.classList.add('hide');
