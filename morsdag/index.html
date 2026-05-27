@@ -29,7 +29,6 @@
       justify-content: center;
       gap: 2rem;
       z-index: 10;
-      cursor: pointer;
       transition: opacity 0.8s ease;
     }
 
@@ -74,18 +73,64 @@
       opacity: 0.85;
     }
 
-    .tap-hint {
-      color: rgba(255,255,255,0.4);
-      font-size: 0.8rem;
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      margin-top: 1rem;
-      animation: blink 2s ease-in-out infinite;
+    /* ── Progress bar ── */
+    .progress-wrap {
+      width: 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
     }
 
-    @keyframes blink {
-      0%, 100% { opacity: 0.4; }
-      50%       { opacity: 0.9; }
+    .progress-track {
+      width: 100%;
+      height: 3px;
+      background: rgba(255,255,255,0.12);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      background: rgba(255,80,80,0.8);
+      border-radius: 99px;
+      transition: width 0.3s ease;
+    }
+
+    .progress-label {
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.35);
+    }
+
+    /* ── Tap button – hidden until ready ── */
+    .tap-btn {
+      margin-top: 0.5rem;
+      padding: 0.75rem 2rem;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 99px;
+      background: transparent;
+      color: #fff;
+      font-family: 'Georgia', serif;
+      font-size: 0.95rem;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.5s ease, transform 0.5s ease, background 0.2s;
+      pointer-events: none;
+    }
+
+    .tap-btn.ready {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .tap-btn:active {
+      background: rgba(255,255,255,0.1);
     }
 
     /* ── Video ── */
@@ -113,40 +158,68 @@
     src="https://www.dropbox.com/scl/fi/tn9ix07iwogvtvtr1bktx/morsdag2.mp4?rlkey=vbzqhyuwi86lbqhp5u2lbbf0c&st=198gz2no&raw=1"
     playsinline
     webkit-playsinline
-    autoplay
     preload="auto"
   ></video>
 
-  <div id="splash" onclick="startVideo()">
+  <div id="splash">
     <div class="pulse-ring">
       <span class="heart">❤️</span>
     </div>
     <p class="splash-text">Något till dig</p>
-    <p class="tap-hint">Tryck för att öppna</p>
+
+    <div class="progress-wrap">
+      <div class="progress-track">
+        <div class="progress-fill" id="bar"></div>
+      </div>
+      <p class="progress-label" id="bar-label">Laddar...</p>
+    </div>
+
+    <button class="tap-btn" id="tapBtn" onclick="startVideo()">Öppna ❤️</button>
   </div>
 
   <script>
+    const video    = document.getElementById('player');
+    const bar      = document.getElementById('bar');
+    const barLabel = document.getElementById('bar-label');
+    const tapBtn   = document.getElementById('tapBtn');
+
+    function setReady() {
+      bar.style.width = '100%';
+      barLabel.textContent = 'Redo';
+      tapBtn.classList.add('ready');
+    }
+
+    // Lyssna på buffring
+    video.addEventListener('progress', () => {
+      if (video.buffered.length > 0 && video.duration) {
+        const pct = (video.buffered.end(0) / video.duration) * 100;
+        bar.style.width = Math.min(pct, 100) + '%';
+        if (pct >= 100) setReady();
+      }
+    });
+
+    // canplaythrough = tillräckligt buffrat för att spela utan stopp
+    video.addEventListener('canplaythrough', setReady);
+
+    // Fallback: om ingen progress-event inom 8s, lås upp ändå
+    setTimeout(setReady, 8000);
+
     async function startVideo() {
       const splash = document.getElementById('splash');
-      const video  = document.getElementById('player');
 
-      // 2. Spela videon
       video.play().catch(() => {});
       video.classList.add('visible');
 
-      // 3. Fullskärm – prova video.webkitEnterFullscreen för iOS
       try {
-        if (video.requestFullscreen)            await video.requestFullscreen();
-        else if (video.webkitEnterFullscreen)   video.webkitEnterFullscreen();
-        else if (video.mozRequestFullScreen)    video.mozRequestFullScreen();
+        if (video.requestFullscreen)           await video.requestFullscreen();
+        else if (video.webkitEnterFullscreen)  video.webkitEnterFullscreen();
+        else if (video.mozRequestFullScreen)   video.mozRequestFullScreen();
       } catch(e) {}
 
-      // 4. Göm splash
       splash.classList.add('hide');
       setTimeout(() => splash.remove(), 900);
     }
 
-    // Lås skärmorientering till landscape om möjligt
     if (screen.orientation && screen.orientation.lock) {
       screen.orientation.lock('landscape').catch(() => {});
     }
