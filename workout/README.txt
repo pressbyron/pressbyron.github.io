@@ -27,3 +27,10 @@ NYTT I VERSION 3
 - Varje mätpunkt sparas separat.
 - Grafen visar alla mätningar samt en tydligare linje för veckomedel.
 - Varningar baseras på veckomedel i stället för enstaka vägningar.
+
+
+NYTT I VERSION 4
+- Datum och tid visas på genomförda pass i checklistan.
+- Historiken visar datum och tid för registrerade set.
+- Varje viktpunkt visar datum och tid i listan.
+- Viktgrafens punkter har tooltip med datum, tid och vikt.

@@ -204,6 +204,12 @@
     }
     .pass-title{font-weight:800}
     .pass-subtitle{color:var(--muted);font-size:.84rem;margin-top:2px}
+    .pass-date{
+      color:#7fc6c8;
+      font-size:.78rem;
+      margin-top:5px;
+      text-decoration:none!important;
+    }
     .row-arrow{color:var(--muted);font-size:1.2rem}
     .hidden{display:none!important}
     .session-top{
@@ -798,6 +804,20 @@ function workoutCompleted(week, workout){
   return Boolean(safeStorage.getItem(completionKey(week, workout)));
 }
 
+function workoutCompletedAt(week, workout){
+  return safeStorage.getItem(completionKey(week, workout));
+}
+
+function formatSwedishDate(value, includeTime=false){
+  if(!value) return "";
+  const date = new Date(value);
+  if(Number.isNaN(date.getTime())) return "";
+  const options = includeTime
+    ? {year:"numeric", month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"}
+    : {year:"numeric", month:"short", day:"numeric"};
+  return date.toLocaleDateString("sv-SE", options);
+}
+
 const workoutMeta = {
   A: {title:"Pass A", subtitle:"Press, ben, rygg och planchestyrka"},
   B: {title:"Pass B", subtitle:"Rygg, rumpa, axlar och bål"},
@@ -829,7 +849,8 @@ function renderProgramChecklist(){
     block.appendChild(guidance);
 
     ["A","B","C"].forEach(key=>{
-      const isDone = workoutCompleted(week,key);
+      const completedAt = workoutCompletedAt(week,key);
+      const isDone = Boolean(completedAt);
       const btn = document.createElement("button");
       btn.className = "checklist-row" + (isDone ? " completed" : "");
       btn.type = "button";
@@ -839,6 +860,7 @@ function renderProgramChecklist(){
           <div>
             <div class="pass-title">${workoutMeta[key].title}</div>
             <div class="pass-subtitle">${workoutMeta[key].subtitle}</div>
+            ${isDone ? `<div class="pass-date">Genomfört ${formatSwedishDate(completedAt, true)}</div>` : ""}
           </div>
         </div>
         <span class="row-arrow">›</span>
@@ -1333,13 +1355,16 @@ function renderWeightChart(points, averages){
   for(let week=1;week<=12;week++){
     const weekPoints = points.filter(p=>p.week===week);
     weekPoints.forEach((p,i)=>{
-      add("circle",{
+      const circle = add("circle",{
         cx:xWeek(week)+pointOffset(i,weekPoints.length),
         cy:y(p.weight),
-        r:"4.5",
+        r:"5.5",
         fill:"#9fb0c0",
-        opacity:"0.85"
+        opacity:"0.9"
       });
+      const title = document.createElementNS(ns,"title");
+      title.textContent = `${formatSwedishDate(p.date, true)} · ${p.weight.toFixed(1)} kg`;
+      circle.appendChild(title);
     });
   }
 
@@ -1350,7 +1375,10 @@ function renderWeightChart(points, averages){
   }
 
   averages.forEach(p=>{
-    add("circle",{cx:xWeek(p.week),cy:y(p.average),r:"6.5",fill:"#68d391",stroke:"#0b1117","stroke-width":"3"});
+    const circle = add("circle",{cx:xWeek(p.week),cy:y(p.average),r:"6.5",fill:"#68d391",stroke:"#0b1117","stroke-width":"3"});
+    const title = document.createElementNS(ns,"title");
+    title.textContent = `Vecka ${p.week} · snitt ${p.average.toFixed(1)} kg · ${p.count} mätning${p.count===1?"":"ar"}`;
+    circle.appendChild(title);
     add("text",{x:xWeek(p.week),y:y(p.average)-12,"text-anchor":"middle",fill:"#f3f7fb","font-size":"12","font-weight":"700"},p.average.toFixed(1));
   });
 }
@@ -1396,7 +1424,7 @@ function renderWeightView(){
       const sub=document.createElement("div");
       sub.className="weight-row";
       sub.style.opacity=".72";
-      const date = new Date(p.date).toLocaleDateString("sv-SE",{month:"short",day:"numeric"});
+      const date = formatSwedishDate(p.date, true);
       sub.innerHTML=`<span>${date}</span><span>${p.weight.toFixed(1)} kg</span>`;
       $("weightTable").appendChild(sub);
     });
@@ -1416,7 +1444,7 @@ function showHistory(){
     const [w,p,name,setNo] = key.split("|");
     const div = document.createElement("div");
     div.className = "history-item";
-    div.innerHTML = `<div><strong>${name}</strong><div class="small">${w.toUpperCase()} · Pass ${p} · Set ${setNo}</div></div><div><strong>${val.value}</strong><div class="small">${formatUnit(val.type)}</div></div>`;
+    div.innerHTML = `<div><strong>${name}</strong><div class="small">${w.toUpperCase()} · Pass ${p} · Set ${setNo}</div><div class="small">${formatSwedishDate(val.date, true)}</div></div><div><strong>${val.value}</strong><div class="small">${formatUnit(val.type)}</div></div>`;
     $("historyList").appendChild(div);
   });
   showSection(history);
