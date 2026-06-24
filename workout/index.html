@@ -421,6 +421,79 @@
       padding:12px;
     }
     .small{font-size:.85rem;color:var(--muted)}
+
+    .post-workout-weight{
+      text-align:left;
+      margin:22px 0 18px;
+      padding:16px;
+      border-radius:16px;
+      background:#0f171f;
+      border:1px solid var(--border);
+    }
+    .weight-entry-row{
+      display:grid;
+      grid-template-columns:1fr auto;
+      align-items:end;
+      gap:10px;
+    }
+    .weight-summary{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:10px;
+      margin-top:18px;
+    }
+    .weight-summary > div{
+      padding:14px;
+      border-radius:14px;
+      background:#0f171f;
+      border:1px solid var(--border);
+    }
+    .weight-summary strong{
+      display:block;
+      margin-top:4px;
+      font-size:1.25rem;
+    }
+    .weight-chart-wrap{
+      margin-top:16px;
+      padding:10px;
+      background:#0f171f;
+      border:1px solid var(--border);
+      border-radius:16px;
+      overflow:hidden;
+    }
+    .weight-chart{
+      width:100%;
+      height:auto;
+      display:block;
+    }
+    .weight-warning{
+      margin-top:16px;
+      padding:13px 14px;
+      border-radius:14px;
+      background:#3a2b17;
+      border:1px solid #6f5225;
+      color:#ffd998;
+      line-height:1.45;
+    }
+    .weight-table{
+      display:grid;
+      gap:8px;
+      margin-top:14px;
+    }
+    .weight-row{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      padding:11px 13px;
+      border-radius:12px;
+      background:#0f171f;
+      border:1px solid var(--border);
+    }
+    @media(max-width:650px){
+      .weight-entry-row{grid-template-columns:1fr}
+      .weight-summary{grid-template-columns:1fr}
+    }
+
     @media(max-width:650px){
       .workout-grid{grid-template-columns:1fr}
       .entry{grid-template-columns:1fr}
@@ -444,7 +517,7 @@
             <h2 style="margin:0 0 4px">12-veckorschecklista</h2>
             <p class="small" style="margin:0">Tryck på ett pass för att starta. Genomförda pass stryks över automatiskt.</p>
           </div>
-          <button class="secondary" id="historyBtn">Historik</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="secondary" id="weightBtn">Vikt & trend</button><button class="secondary" id="historyBtn">Historik</button></div>
         </div>
         <div id="programChecklist" class="program-checklist"></div>
       </div>
@@ -542,7 +615,59 @@
       <div class="card done">
         <h2>Passet är klart</h2>
         <p class="exercise-desc" id="doneText"></p>
-        <button class="primary" id="backHomeBtn">Till startsidan</button>
+
+        <div class="post-workout-weight">
+          <h3 style="margin:0 0 6px">Registrera veckans vikt</h3>
+          <p class="small" id="weightPromptText" style="margin:0 0 12px">Frivilligt. Försök väga dig under liknande förhållanden varje gång.</p>
+          <div class="weight-entry-row">
+            <div>
+              <label for="postWorkoutWeight">Vikt (kg)</label>
+              <input id="postWorkoutWeight" type="number" min="30" max="300" step="0.1" inputmode="decimal" placeholder="69,0" />
+            </div>
+            <button class="primary" id="saveWeightBtn">Spara vikt</button>
+          </div>
+          <div id="weightSavedMessage" class="small" style="margin-top:9px"></div>
+        </div>
+
+        <button class="secondary" id="backHomeBtn">Till startsidan</button>
+      </div>
+    </section>
+
+
+    <section id="weight" class="hidden">
+      <div class="card">
+        <div class="session-top">
+          <div>
+            <span class="badge">Viktutveckling</span>
+            <h2 style="margin-bottom:4px">Vikt vecka för vecka</h2>
+            <p class="small" style="margin:0">Registrera efter varje pass. Alla mätningar sparas och veckomedel räknas automatiskt.</p>
+          </div>
+          <button class="secondary" id="closeWeightBtn">Stäng</button>
+        </div>
+
+        <div id="weightWarning" class="weight-warning hidden"></div>
+
+        <div class="weight-summary">
+          <div>
+            <span class="small">Senaste vikt</span>
+            <strong id="latestWeight">–</strong>
+          </div>
+          <div>
+            <span class="small">Förändring i veckosnitt</span>
+            <strong id="weightChange">–</strong>
+          </div>
+          <div>
+            <span class="small">Mätpunkter</span>
+            <strong id="weightCount">0</strong>
+          </div>
+        </div>
+
+        <div class="weight-chart-wrap">
+          <svg id="weightChart" class="weight-chart" viewBox="0 0 720 300" role="img" aria-label="Graf över vikt per vecka"></svg>
+          <div id="emptyWeightChart" class="small" style="text-align:center;padding:36px 8px">Registrera din vikt efter passen för att skapa grafen och veckomedel.</div>
+        </div>
+
+        <div class="weight-table" id="weightTable"></div>
       </div>
     </section>
 
@@ -732,7 +857,7 @@ function renderProgramChecklist(){
 }
 
 const $ = id => document.getElementById(id);
-const home = $("home"), session = $("session"), done = $("done"), history = $("history");
+const home = $("home"), session = $("session"), done = $("done"), weight = $("weight"), history = $("history");
 
 function adjustedExercises(workoutKey, week){
   const items = [...plancheByWeek(week), ...baseWorkouts[workoutKey].map(x => ({...x}))];
@@ -803,7 +928,7 @@ function changeActualValue(delta){
 function renderWeek(){ refreshWorkoutButtons(); }
 
 function showSection(which){
-  [home,session,done,history].forEach(x=>x.classList.add("hidden"));
+  [home,session,done,weight,history].forEach(x=>x.classList.add("hidden"));
   which.classList.remove("hidden");
   $("appHeader").classList.toggle("hidden", which === session);
 }
@@ -1031,7 +1156,256 @@ function finishWorkout(){
   markWorkoutCompleted(state.week, state.workout);
   refreshWorkoutButtons();
   $("doneText").textContent = `Vecka ${state.week}, pass ${state.workout} är sparat och markerat som genomfört. Bra jobbat.`;
+  prepareWeightPrompt();
   showSection(done);
+}
+
+
+function getWeightHistory(){
+  return JSON.parse(safeStorage.getItem("weightHistory") || "[]");
+}
+
+function normalizeWeightHistory(){
+  const raw = getWeightHistory();
+
+  // Migrate old object-based data from version 2.
+  if(!Array.isArray(raw)){
+    const migrated = Object.entries(raw).map(([key,val]) => ({
+      id: `${key}-${val.date || Date.now()}`,
+      week: Number(key.replace("w","")),
+      weight: Number(val.weight),
+      date: val.date || new Date().toISOString()
+    })).filter(x => Number.isFinite(x.week) && Number.isFinite(x.weight));
+    safeStorage.setItem("weightHistory", JSON.stringify(migrated));
+    return migrated;
+  }
+
+  return raw
+    .map((x,i) => ({
+      id: x.id || `${x.week}-${x.date || i}`,
+      week: Number(x.week),
+      weight: Number(x.weight),
+      date: x.date || new Date().toISOString()
+    }))
+    .filter(x => Number.isFinite(x.week) && Number.isFinite(x.weight));
+}
+
+function saveWeightEntry(week, kilograms){
+  const data = normalizeWeightHistory();
+  data.push({
+    id: `${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
+    week: Number(week),
+    weight: Number(kilograms),
+    date: new Date().toISOString()
+  });
+  safeStorage.setItem("weightHistory", JSON.stringify(data));
+}
+
+function allWeightPoints(){
+  return normalizeWeightHistory().sort((a,b) => new Date(a.date)-new Date(b.date));
+}
+
+function weeklyWeightAverages(){
+  const grouped = {};
+  allWeightPoints().forEach(p=>{
+    grouped[p.week] ||= [];
+    grouped[p.week].push(p.weight);
+  });
+
+  return Object.entries(grouped)
+    .map(([week,weights]) => ({
+      week:Number(week),
+      average:weights.reduce((a,b)=>a+b,0)/weights.length,
+      count:weights.length
+    }))
+    .sort((a,b)=>a.week-b.week);
+}
+
+function prepareWeightPrompt(){
+  const weekPoints = allWeightPoints().filter(x => x.week === state.week);
+  $("postWorkoutWeight").value = "";
+  $("weightSavedMessage").textContent = "";
+  $("weightPromptText").textContent = weekPoints.length
+    ? `Du har ${weekPoints.length} registrering${weekPoints.length === 1 ? "" : "ar"} denna vecka. Lägg till dagens vikt.`
+    : `Första registreringen för vecka ${state.week}. Försök väga dig under liknande förhållanden varje gång.`;
+}
+
+function saveWeightFromDone(){
+  const raw = String($("postWorkoutWeight").value).replace(",", ".");
+  const kg = Number(raw);
+  if(!Number.isFinite(kg) || kg < 30 || kg > 300){
+    $("weightSavedMessage").textContent = "Ange en rimlig vikt mellan 30 och 300 kg.";
+    return;
+  }
+  saveWeightEntry(state.week, Math.round(kg*10)/10);
+  $("weightSavedMessage").textContent = `${kg.toFixed(1)} kg sparat som en ny mätpunkt för vecka ${state.week}.`;
+  $("postWorkoutWeight").value = "";
+  renderWeightView();
+}
+
+function weightTrendWarning(averages){
+  if(averages.length < 2) return null;
+
+  const latest = averages[averages.length-1];
+  const previous = averages[averages.length-2];
+  const oneStep = latest.average - previous.average;
+
+  if(averages.length >= 3){
+    const a = averages[averages.length-3];
+    const b = averages[averages.length-2];
+    const c = averages[averages.length-1];
+    const twoDrops = b.average < a.average && c.average < b.average;
+    const totalDrop = c.average - a.average;
+
+    if(twoDrops && totalDrop <= -0.4){
+      return `Veckomedlet har gått ned två veckor i rad, totalt ${Math.abs(totalDrop).toFixed(1)} kg. En del kan vara vätska, men säkerställ att du äter tillräckligt om målet är muskeltillväxt.`;
+    }
+  }
+
+  if(oneStep <= -0.5){
+    return `Veckomedlet är ${Math.abs(oneStep).toFixed(1)} kg lägre än föregående vecka. Fortsätter det ned även nästa vecka kan du behöva öka maten något.`;
+  }
+
+  return null;
+}
+
+function renderWeightChart(points, averages){
+  const svg = $("weightChart");
+  const empty = $("emptyWeightChart");
+  svg.innerHTML = "";
+
+  if(points.length === 0){
+    svg.classList.add("hidden");
+    empty.classList.remove("hidden");
+    return;
+  }
+
+  svg.classList.remove("hidden");
+  empty.classList.add("hidden");
+
+  const W = 720, H = 300;
+  const pad = {l:58,r:24,t:24,b:46};
+  const plotW = W-pad.l-pad.r;
+  const plotH = H-pad.t-pad.b;
+
+  let minW = Math.min(...points.map(p=>p.weight));
+  let maxW = Math.max(...points.map(p=>p.weight));
+  if(maxW-minW < 1){
+    minW -= .5;
+    maxW += .5;
+  } else {
+    minW -= .3;
+    maxW += .3;
+  }
+
+  const pointOffset = (index,total) => {
+    if(total <= 1) return 0;
+    const spread = 18;
+    return ((index/(total-1))-.5)*spread;
+  };
+  const xWeek = week => pad.l + ((week-1)/11)*plotW;
+  const y = kg => pad.t + (maxW-kg)/(maxW-minW)*plotH;
+
+  const ns = "http://www.w3.org/2000/svg";
+  const add = (name, attrs, text) => {
+    const el = document.createElementNS(ns,name);
+    Object.entries(attrs||{}).forEach(([k,v])=>el.setAttribute(k,v));
+    if(text !== undefined) el.textContent=text;
+    svg.appendChild(el);
+    return el;
+  };
+
+  for(let i=0;i<=4;i++){
+    const kg = minW + (maxW-minW)*(i/4);
+    const yy = y(kg);
+    add("line",{x1:pad.l,y1:yy,x2:W-pad.r,y2:yy,stroke:"#263544","stroke-width":"1"});
+    add("text",{x:pad.l-10,y:yy+4,"text-anchor":"end",fill:"#9fb0c0","font-size":"12"},kg.toFixed(1));
+  }
+
+  for(let week=1;week<=12;week++){
+    const xx=xWeek(week);
+    if(week===1 || week===4 || week===8 || week===12){
+      add("text",{x:xx,y:H-18,"text-anchor":"middle",fill:"#9fb0c0","font-size":"12"},`V${week}`);
+    }
+  }
+
+  // All raw measurements.
+  for(let week=1;week<=12;week++){
+    const weekPoints = points.filter(p=>p.week===week);
+    weekPoints.forEach((p,i)=>{
+      add("circle",{
+        cx:xWeek(week)+pointOffset(i,weekPoints.length),
+        cy:y(p.weight),
+        r:"4.5",
+        fill:"#9fb0c0",
+        opacity:"0.85"
+      });
+    });
+  }
+
+  // Weekly average line.
+  if(averages.length > 1){
+    const path = averages.map((p,i)=>`${i===0?"M":"L"} ${xWeek(p.week)} ${y(p.average)}`).join(" ");
+    add("path",{d:path,fill:"none",stroke:"#29c7c8","stroke-width":"4","stroke-linecap":"round","stroke-linejoin":"round"});
+  }
+
+  averages.forEach(p=>{
+    add("circle",{cx:xWeek(p.week),cy:y(p.average),r:"6.5",fill:"#68d391",stroke:"#0b1117","stroke-width":"3"});
+    add("text",{x:xWeek(p.week),y:y(p.average)-12,"text-anchor":"middle",fill:"#f3f7fb","font-size":"12","font-weight":"700"},p.average.toFixed(1));
+  });
+}
+
+function renderWeightView(){
+  const points = allWeightPoints();
+  const averages = weeklyWeightAverages();
+
+  $("weightCount").textContent = String(points.length);
+
+  if(points.length){
+    const latest = points[points.length-1];
+    $("latestWeight").textContent = `${latest.weight.toFixed(1)} kg`;
+
+    if(averages.length > 1){
+      const first = averages[0];
+      const last = averages[averages.length-1];
+      const delta = last.average-first.average;
+      $("weightChange").textContent = `${delta>0?"+":""}${delta.toFixed(1)} kg`;
+    } else {
+      $("weightChange").textContent = "0,0 kg";
+    }
+  } else {
+    $("latestWeight").textContent = "–";
+    $("weightChange").textContent = "–";
+  }
+
+  const warning = weightTrendWarning(averages);
+  $("weightWarning").classList.toggle("hidden", !warning);
+  $("weightWarning").textContent = warning || "";
+
+  renderWeightChart(points, averages);
+
+  $("weightTable").innerHTML = "";
+  [...averages].reverse().forEach(avg=>{
+    const row=document.createElement("div");
+    row.className="weight-row";
+    row.innerHTML=`<span>Vecka ${avg.week} · ${avg.count} mätning${avg.count===1?"":"ar"}</span><strong>Snitt ${avg.average.toFixed(1)} kg</strong>`;
+    $("weightTable").appendChild(row);
+
+    const details = points.filter(p=>p.week===avg.week).sort((a,b)=>new Date(b.date)-new Date(a.date));
+    details.forEach(p=>{
+      const sub=document.createElement("div");
+      sub.className="weight-row";
+      sub.style.opacity=".72";
+      const date = new Date(p.date).toLocaleDateString("sv-SE",{month:"short",day:"numeric"});
+      sub.innerHTML=`<span>${date}</span><span>${p.weight.toFixed(1)} kg</span>`;
+      $("weightTable").appendChild(sub);
+    });
+  });
+}
+
+function showWeight(){
+  renderWeightView();
+  showSection(weight);
 }
 
 function showHistory(){
@@ -1056,8 +1430,11 @@ $("increaseActual").addEventListener("click",()=>changeActualValue(1));
 $("skipBtn").addEventListener("click",()=>completeSet(true));
 $("actualInput").addEventListener("keydown",e=>{ if(e.key==="Enter") completeSet(false); });
 $("exitBtn").addEventListener("click",()=>{ clearInterval(state.timer); clearExecutionTimer(); showSection(home); });
+$("saveWeightBtn").addEventListener("click",saveWeightFromDone);
 $("backHomeBtn").addEventListener("click",()=>showSection(home));
+$("weightBtn").addEventListener("click",showWeight);
 $("historyBtn").addEventListener("click",showHistory);
+$("closeWeightBtn").addEventListener("click",()=>showSection(home));
 $("closeHistoryBtn").addEventListener("click",()=>showSection(home));
 $("minus15").addEventListener("click",()=>{state.timerRemaining=Math.max(0,state.timerRemaining-15);updateTimer();});
 $("plus15").addEventListener("click",()=>{state.timerRemaining+=15;updateTimer();});
