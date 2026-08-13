@@ -5,14 +5,25 @@
   const TIMER_CIRCUMFERENCE = 622;
 
   const EXAMPLE_PROGRAM = {
-    title: "Full Body Ignite",
-    description: "A fast, balanced full-body session.",
-    restSeconds: 30,
+    title: "Upper Body + Abs Strength",
+    description: "Controlled strength work for the upper body, grip, and core. Rest properly and keep every rep clean.",
+    restSeconds: 75,
     exercises: [
-      { title: "Air squats", sets: 3, reps: 15, description: "Keep your chest proud and drive through the whole foot." },
-      { title: "Push ups", sets: 3, reps: 10, restSeconds: 40, description: "Keep one strong line from head to heel." },
-      { title: "Forearm plank", sets: 2, durationSeconds: 40, description: "Brace hard and breathe behind the shield." },
-      { title: "Reverse lunges", sets: 3, reps: 10, description: "Reps are per side. Step back softly." }
+      { title: "Arm Circles", sets: 2, reps: 20, description: "10 forward, 10 backward. Use smooth, controlled movements.", restSeconds: 15 },
+      { title: "Kettlebell Halo", sets: 2, reps: 5, description: "Move with control around your head and keep your ribs down.", restSeconds: 15 },
+      { title: "Scapular Pull-Up", sets: 2, reps: 6, description: "Keep your arms straight. Pull your shoulder blades down without bending your elbows.", restSeconds: 15 },
+      { title: "Push-Up Warm-Up", sets: 2, reps: 6, description: "Use slow reps and leave plenty of strength in reserve.", restSeconds: 15 },
+      { title: "Chin Tuck", sets: 2, reps: 8, description: "Pull your chin straight back without tilting your head downward.", restSeconds: 15 },
+      { title: "Chin-Up", sets: 3, reps: 6, description: "Keep your chest up and shoulders down. Stay controlled throughout.", restSeconds: 90 },
+      { title: "Single-Arm Floor Press", sets: 3, reps: 10, description: "Brace your core and press steadily without rotating your body.", restSeconds: 75 },
+      { title: "Single-Arm Kettlebell Row", sets: 3, reps: 10, description: "Pull your elbow back toward your hip and keep your back stable.", restSeconds: 75 },
+      { title: "Single-Arm Overhead Press", sets: 3, reps: 8, description: "Squeeze your glutes and brace your core. Press straight up without arching your back.", restSeconds: 75 },
+      { title: "Push-Up", sets: 3, reps: 12, description: "Keep your body straight and lower with control. Bring your chest close to the floor.", restSeconds: 60 },
+      { title: "Kettlebell Curl", sets: 3, reps: 10, description: "Keep your elbow still and avoid swinging the weight.", restSeconds: 60 },
+      { title: "Dead Hang", sets: 3, durationSeconds: 30, description: "Hang long and relaxed while maintaining a secure grip.", restSeconds: 60 },
+      { title: "Hanging Knee Raise", sets: 2, reps: 10, description: "Use your abs to pull your knees up without swinging.", restSeconds: 45 },
+      { title: "Reverse Plank", sets: 2, durationSeconds: 30, description: "Press your hips up and keep your body in a straight line.", restSeconds: 45 },
+      { title: "Wall Angels", sets: 2, reps: 10, description: "Keep your back and arms as close to the wall as possible.", restSeconds: 30 }
     ]
   };
 
@@ -102,7 +113,21 @@ My goal, experience, available equipment, workout duration, and preferences are:
   function loadPrograms() {
     try {
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (Array.isArray(stored) && stored.length) return stored.map(normalizeProgram);
+      if (Array.isArray(stored) && stored.length) {
+        let migrated = false;
+        const loaded = stored.map((program) => {
+          const isLegacyDummy = program?.title === "Full Body Ignite";
+          const isSwedishStarter = program?.title === "Upper Body + Abs Strength"
+            && program?.description === "Kontrollerad styrka för överkropp, grepp och core. Vila ordentligt och håll varje rep ren.";
+          if (isLegacyDummy || isSwedishStarter) {
+            migrated = true;
+            return { ...normalizeProgram(EXAMPLE_PROGRAM), id: program.id };
+          }
+          return normalizeProgram(program);
+        });
+        if (migrated) localStorage.setItem(STORAGE_KEY, JSON.stringify(loaded));
+        return loaded;
+      }
     } catch (_) { /* Fall back to the starter program. */ }
     return [{ ...normalizeProgram(EXAMPLE_PROGRAM), id: crypto.randomUUID?.() || String(Date.now()) }];
   }

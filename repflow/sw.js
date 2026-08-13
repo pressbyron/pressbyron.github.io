@@ -1,9 +1,9 @@
-const CACHE_NAME = "repflow-v8";
+const CACHE_NAME = "repflow-v10";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css?v=6",
-  "./app.js?v=8",
+  "./app.js?v=10",
   "./manifest.webmanifest",
   "./assets/icon.svg",
   "./assets/icon-192.png",
