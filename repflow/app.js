@@ -2,6 +2,7 @@
   "use strict";
 
   const STORAGE_KEY = "repflow-programs-v1";
+  const DEFAULT_VIDEO_MIGRATION_KEY = "repflow-default-videos-v1";
   const TIMER_CIRCUMFERENCE = 622;
 
   const EXAMPLE_PROGRAM = {
@@ -32,6 +33,19 @@
     description: "A guided mobility session from YouTube.",
     youtubeUrl: "https://www.youtube.com/watch?v=M7lc1UVf-VE"
   };
+
+  const DEFAULT_VIDEO_PROGRAMS = [
+    {
+      title: "Upper body kettlebell",
+      description: "25min workout",
+      youtubeUrl: "https://www.youtube.com/watch?v=rgYyLxI3wIo"
+    },
+    {
+      title: "Leg kettlebell workout",
+      description: "20min workout",
+      youtubeUrl: "https://www.youtube.com/watch?v=5WlI327TSR4"
+    }
+  ];
 
   const AI_PROMPT = `Create a program for the Repflow app and return ONLY valid JSON — no markdown fences or explanation.
 
@@ -125,11 +139,22 @@ My goal, experience, available equipment, workout duration, and preferences are:
           }
           return normalizeProgram(program);
         });
+        if (!localStorage.getItem(DEFAULT_VIDEO_MIGRATION_KEY)) {
+          DEFAULT_VIDEO_PROGRAMS.forEach((defaultProgram) => {
+            const videoId = extractYouTubeVideoId(defaultProgram.youtubeUrl);
+            if (!loaded.some((program) => program.youtubeVideoId === videoId)) {
+              loaded.push(normalizeProgram(defaultProgram));
+              migrated = true;
+            }
+          });
+          localStorage.setItem(DEFAULT_VIDEO_MIGRATION_KEY, "1");
+        }
         if (migrated) localStorage.setItem(STORAGE_KEY, JSON.stringify(loaded));
         return loaded;
       }
     } catch (_) { /* Fall back to the starter program. */ }
-    return [{ ...normalizeProgram(EXAMPLE_PROGRAM), id: crypto.randomUUID?.() || String(Date.now()) }];
+    try { localStorage.setItem(DEFAULT_VIDEO_MIGRATION_KEY, "1"); } catch (_) { /* Storage may be unavailable. */ }
+    return [EXAMPLE_PROGRAM, ...DEFAULT_VIDEO_PROGRAMS].map(normalizeProgram);
   }
 
   function persistPrograms() {
