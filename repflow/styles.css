@@ -329,6 +329,8 @@ main { width: min(1180px, calc(100% - 48px)); margin: 0 auto; }
 .loading-mark svg { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .video-next { margin-top: 24px; }
+.video-next-copy { min-width: 0; flex: 1; }
+.video-finish-button { min-height: 40px; padding: 8px 13px; flex: 0 0 auto; color: white; background: var(--accent); }
 
 /* Finish */
 .finish-view.is-active { min-height: calc(100vh - 92px); padding: 70px 0; text-align: center; }
@@ -425,6 +427,7 @@ textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(244,93,
   .video-heading h2 { font-size: clamp(40px, 13vw, 60px); }
   .video-frame-shell { border-width: 5px; border-radius: 19px; }
   .video-next { position: static; }
+  .video-next .video-finish-button { max-width: 110px; }
   .dialog-shell { padding: 24px 18px; }
   .dialog-header h2 { font-size: 27px; }
   textarea { height: 260px; }

@@ -107,7 +107,8 @@ My goal, experience, available equipment, workout duration, and preferences are:
     nextTitle: $("#nextTitle"), nextDetail: $("#nextDetail"),
     confirmDialog: $("#confirmDialog"), continueWorkout: $("#continueWorkoutButton"), confirmExit: $("#confirmExitButton"),
     videoTitle: $("#videoProgramTitle"), videoDescription: $("#videoProgramDescription"), videoLoading: $("#videoLoading"),
-    youtubePlayer: $("#youtubePlayer"), exitVideo: $("#exitVideoButton"),
+    youtubePlayer: $("#youtubePlayer"), exitVideo: $("#exitVideoButton"), finishVideo: $("#finishVideoButton"),
+    videoCompletionHint: $("#videoCompletionHint"),
     finishTime: $("#finishTime"), finishTimeLabel: $("#finishTimeLabel"),
     finishExercises: $("#finishExercises"), finishExercisesLabel: $("#finishExercisesLabel"),
     finishSets: $("#finishSets"), finishSetsLabel: $("#finishSetsLabel"), finishButton: $("#finishButton")
@@ -364,8 +365,10 @@ My goal, experience, available equipment, workout duration, and preferences are:
     if (window.YT?.Player) return Promise.resolve(window.YT);
     if (youtubeApiPromise) return youtubeApiPromise;
     youtubeApiPromise = new Promise((resolve, reject) => {
+      const timeout = window.setTimeout(() => reject(new Error("YouTube API timed out.")), 8000);
       const previousCallback = window.onYouTubeIframeAPIReady;
       window.onYouTubeIframeAPIReady = () => {
+        window.clearTimeout(timeout);
         previousCallback?.();
         resolve(window.YT);
       };
@@ -382,9 +385,21 @@ My goal, experience, available equipment, workout duration, and preferences are:
     try { youtubePlayer?.destroy(); } catch (_) { /* The player may not be ready yet. */ }
     youtubePlayer = null;
     document.querySelector("#youtubePlayer")?.remove();
-    const mount = document.createElement("div");
-    mount.id = "youtubePlayer";
-    document.querySelector(".video-frame-shell").appendChild(mount);
+  }
+
+  function createYouTubeIframe(program) {
+    const params = new URLSearchParams({ enablejsapi: "1", playsinline: "1", rel: "0" });
+    if (/^https?:$/.test(location.protocol)) params.set("origin", location.origin);
+    const iframe = document.createElement("iframe");
+    iframe.id = "youtubePlayer";
+    iframe.title = `${program.title} YouTube workout`;
+    iframe.src = `https://www.youtube.com/embed/${program.youtubeVideoId}?${params}`;
+    iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+    iframe.referrerPolicy = "strict-origin-when-cross-origin";
+    iframe.allowFullscreen = true;
+    iframe.addEventListener("load", () => { els.videoLoading.hidden = true; }, { once: true });
+    document.querySelector(".video-frame-shell").appendChild(iframe);
+    return iframe;
   }
 
   async function startVideoProgram(program) {
@@ -393,6 +408,8 @@ My goal, experience, available equipment, workout duration, and preferences are:
     videoSession = { program, startedAt: Date.now(), completed: false };
     els.videoTitle.textContent = program.title;
     els.videoDescription.textContent = program.description || "Follow along at your own pace. The program completes when the video ends.";
+    els.videoCompletionHint.textContent = "This session finishes automatically when the video ends.";
+    els.finishVideo.hidden = true;
     els.videoLoading.hidden = false;
     els.videoLoading.innerHTML = `<span class="loading-mark"><i data-lucide="loader-circle"></i></span><strong>Loading your workout…</strong>`;
     showView(els.video);
@@ -404,16 +421,12 @@ My goal, experience, available equipment, workout duration, and preferences are:
       return;
     }
 
+    const iframe = createYouTubeIframe(program);
+
     try {
       const YT = await loadYouTubeApi();
       if (!videoSession || videoSession.program.id !== program.id) return;
-      const playerVars = { playsinline: 1, rel: 0 };
-      if (/^https?:$/.test(location.protocol)) playerVars.origin = location.origin;
-      youtubePlayer = new YT.Player("youtubePlayer", {
-        width: "960",
-        height: "540",
-        videoId: program.youtubeVideoId,
-        playerVars,
+      youtubePlayer = new YT.Player(iframe, {
         events: {
           onReady: () => { els.videoLoading.hidden = true; },
           onStateChange: (event) => {
@@ -423,8 +436,16 @@ My goal, experience, available equipment, workout duration, and preferences are:
         }
       });
     } catch (_) {
-      showVideoError("api");
+      enableManualVideoFinish();
     }
+  }
+
+  function enableManualVideoFinish() {
+    if (!videoSession) return;
+    els.videoLoading.hidden = true;
+    els.videoCompletionHint.textContent = "When the video ends, finish the workout here.";
+    els.finishVideo.hidden = false;
+    showToast("Video ready · manual finish enabled", "play");
   }
 
   function showVideoError(errorCode) {
@@ -834,6 +855,7 @@ My goal, experience, available equipment, workout duration, and preferences are:
   els.sound.addEventListener("click", toggleSound);
   els.exit.addEventListener("click", () => els.confirmDialog.showModal());
   els.exitVideo.addEventListener("click", () => els.confirmDialog.showModal());
+  els.finishVideo.addEventListener("click", completeVideoProgram);
   els.continueWorkout.addEventListener("click", () => els.confirmDialog.close());
   els.confirmExit.addEventListener("click", exitWorkout);
   els.finishButton.addEventListener("click", () => showView(els.home));

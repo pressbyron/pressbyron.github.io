@@ -96,7 +96,7 @@ If the schema changes, update all of the following together:
 
 The active workout is held in the `workout` object in `app.js`.
 
-YouTube programs use the separate `videoSession` state. The player is constructed with the YouTube IFrame API, and `YT.PlayerState.ENDED` must call `completeVideoProgram()`. Destroy the player when the video completes or the user exits so audio and playback cannot continue in the background.
+YouTube programs use the separate `videoSession` state. Render the iframe directly before loading the YouTube IFrame API so playback is not gated by the API script in iOS standalone mode. The API attaches to that existing iframe, and `YT.PlayerState.ENDED` must call `completeVideoProgram()`. If the event API cannot load, retain playback and expose the manual finish fallback. Destroy the player or iframe when the video completes or the user exits so audio and playback cannot continue in the background.
 
 The two main phases are:
 

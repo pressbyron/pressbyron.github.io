@@ -21,7 +21,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./styles.css?v=12" />
+    <link rel="stylesheet" href="./styles.css?v=13" />
   </head>
   <body>
     <div class="noise" aria-hidden="true"></div>
@@ -144,11 +144,12 @@
 
         <aside class="next-card video-next" aria-label="Program completion">
           <div class="next-icon"><i data-lucide="flag"></i></div>
-          <div>
+          <div class="video-next-copy">
             <p>NEXT UP</p>
             <strong>Program complete</strong>
-            <span>This session finishes automatically when the video ends.</span>
+            <span id="videoCompletionHint">This session finishes automatically when the video ends.</span>
           </div>
+          <button class="mini-button video-finish-button" id="finishVideoButton" type="button" hidden>Finish workout</button>
         </aside>
       </section>
 
@@ -236,6 +237,6 @@
     </div>
 
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
-    <script src="./app.js?v=11"></script>
+    <script src="./app.js?v=13"></script>
   </body>
 </html>
