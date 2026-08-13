@@ -297,7 +297,13 @@ main { width: min(1180px, calc(100% - 48px)); margin: 0 auto; }
 .next-card span { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; }
 
 /* Video program */
-.video-view.is-active { min-height: calc(100vh - 92px); padding: 10px 0 60px; }
+.video-view.is-active {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: max(24px, calc(env(safe-area-inset-top) + 12px)) 0 max(60px, calc(env(safe-area-inset-bottom) + 24px));
+}
+.video-view .workout-topline { min-height: 48px; }
+.video-view .text-button { min-width: 48px; min-height: 48px; padding: 0; }
 .video-heading { max-width: 820px; margin: 46px auto 30px; text-align: center; }
 .video-heading .phase-pill { width: max-content; margin: 0 auto 20px; }
 .video-heading h2 { margin: 0; font-size: clamp(42px, 7vw, 76px); line-height: 1; letter-spacing: -.06em; }
@@ -415,6 +421,7 @@ textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(244,93,
   .next-card { position: sticky; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 4; background: rgba(255,253,248,.9); backdrop-filter: blur(12px); }
   .workout-view .next-card { position: static; bottom: auto; }
   .video-heading { margin-top: 34px; }
+  .video-view.is-active { padding-top: max(28px, calc(env(safe-area-inset-top) + 14px)); }
   .video-heading h2 { font-size: clamp(40px, 13vw, 60px); }
   .video-frame-shell { border-width: 5px; border-radius: 19px; }
   .video-next { position: static; }
