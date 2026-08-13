@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f45d38" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Repflow" />
+    <meta name="description" content="Build workout programs with JSON and run focused, timed sessions." />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+
+    <title>Repflow — workouts that move</title>
+
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" />
+    <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css?v=6" />
+  </head>
+  <body>
+    <div class="noise" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Repflow home">
+        <span class="brand-mark"><i data-lucide="move-up-right"></i></span>
+        <span>REPFLOW</span>
+      </a>
+      <button class="icon-button" id="installButton" type="button" aria-label="Install app" hidden>
+        <i data-lucide="download"></i>
+      </button>
+    </header>
+
+    <main>
+      <section class="view home-view is-active" id="homeView" aria-labelledby="homeTitle">
+        <div class="hero">
+          <div class="eyebrow"><span></span> YOUR TRAINING, YOUR RULES</div>
+          <h1 id="homeTitle">Move with<br /><em>purpose.</em></h1>
+          <p>Focused sessions. Clean transitions. Nothing between you and the next rep.</p>
+          <button class="primary-button hero-button" id="createButton" type="button">
+            <span>Create a program</span>
+            <i data-lucide="plus"></i>
+          </button>
+        </div>
+
+        <section class="program-section" aria-labelledby="programsTitle">
+          <div class="section-heading">
+            <div>
+              <p class="kicker">THE LIBRARY</p>
+              <h2 id="programsTitle">Your programs</h2>
+            </div>
+            <span class="program-count" id="programCount">0 programs</span>
+          </div>
+          <div class="program-grid" id="programGrid"></div>
+        </section>
+      </section>
+
+      <section class="view workout-view" id="workoutView" aria-live="polite">
+        <div class="workout-topline">
+          <button class="text-button" id="exitWorkoutButton" type="button">
+            <i data-lucide="x"></i><span>Exit</span>
+          </button>
+          <p class="workout-program-name" id="workoutProgramName"></p>
+          <button class="icon-button subtle" id="soundButton" type="button" aria-label="Mute sounds">
+            <i data-lucide="volume-2"></i>
+          </button>
+        </div>
+
+        <div class="progress-wrap">
+          <div class="progress-meta">
+            <span id="progressLabel">Exercise 1 of 1</span>
+            <span id="progressPercent">0%</span>
+          </div>
+          <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+        </div>
+
+        <div class="workout-stage">
+          <div class="phase-pill" id="phasePill"><span></span> WORK</div>
+          <p class="set-label" id="setLabel">SET 1 / 3</p>
+          <h2 class="exercise-title" id="exerciseTitle">Push ups</h2>
+          <p class="exercise-description" id="exerciseDescription"></p>
+
+          <div class="metric" id="metric">
+            <span class="metric-value" id="metricValue">12</span>
+            <span class="metric-unit" id="metricUnit">REPS</span>
+          </div>
+
+          <div class="timer-ring" id="timerRing" hidden>
+            <svg viewBox="0 0 220 220" aria-hidden="true">
+              <circle class="timer-ring-bg" cx="110" cy="110" r="99"></circle>
+              <circle class="timer-ring-fill" id="timerCircle" cx="110" cy="110" r="99"></circle>
+            </svg>
+            <div class="timer-time" id="timerTime">00:30</div>
+          </div>
+
+          <button class="complete-button" id="actionButton" type="button">
+            <span id="actionButtonLabel">Complete set</span>
+            <i data-lucide="arrow-up-right"></i>
+          </button>
+          <button class="pause-button" id="pauseButton" type="button" hidden>
+            <i data-lucide="pause"></i><span>Pause timer</span>
+          </button>
+        </div>
+
+        <aside class="next-card" aria-label="Next up">
+          <div class="next-icon"><i data-lucide="corner-right-down"></i></div>
+          <div>
+            <p>NEXT UP</p>
+            <strong id="nextTitle">—</strong>
+            <span id="nextDetail">Finish</span>
+          </div>
+        </aside>
+      </section>
+
+      <section class="view video-view" id="videoView" aria-labelledby="videoProgramTitle">
+        <div class="workout-topline">
+          <button class="text-button" id="exitVideoButton" type="button">
+            <i data-lucide="x"></i><span>Exit</span>
+          </button>
+          <p class="workout-program-name">VIDEO PROGRAM</p>
+          <span></span>
+        </div>
+
+        <div class="video-heading">
+          <div class="phase-pill"><span></span> FOLLOW ALONG</div>
+          <h2 id="videoProgramTitle"></h2>
+          <p id="videoProgramDescription"></p>
+        </div>
+
+        <div class="video-frame-shell">
+          <div class="video-loading" id="videoLoading">
+            <span class="loading-mark"><i data-lucide="loader-circle"></i></span>
+            <strong>Loading your workout…</strong>
+          </div>
+          <div id="youtubePlayer"></div>
+        </div>
+
+        <aside class="next-card video-next" aria-label="Program completion">
+          <div class="next-icon"><i data-lucide="flag"></i></div>
+          <div>
+            <p>NEXT UP</p>
+            <strong>Program complete</strong>
+            <span>This session finishes automatically when the video ends.</span>
+          </div>
+        </aside>
+      </section>
+
+      <section class="view finish-view" id="finishView" aria-labelledby="finishTitle">
+        <div class="finish-burst"><i data-lucide="sparkles"></i></div>
+        <p class="kicker">SESSION COMPLETE</p>
+        <h2 id="finishTitle">Strong work.</h2>
+        <p class="finish-copy">You showed up and got it done.</p>
+        <div class="finish-stats">
+          <div><strong id="finishTime">00:00</strong><span id="finishTimeLabel">TIME</span></div>
+          <div><strong id="finishExercises">0</strong><span id="finishExercisesLabel">EXERCISES</span></div>
+          <div><strong id="finishSets">0</strong><span id="finishSetsLabel">SETS</span></div>
+        </div>
+        <button class="primary-button" id="finishButton" type="button">
+          <span>Back to programs</span><i data-lucide="arrow-right"></i>
+        </button>
+      </section>
+    </main>
+
+    <dialog class="program-dialog" id="programDialog">
+      <div class="dialog-shell">
+        <div class="dialog-header">
+          <div>
+            <p class="kicker">JSON PROGRAM BUILDER</p>
+            <h2>Create your program</h2>
+          </div>
+          <button class="icon-button" id="closeDialogButton" type="button" aria-label="Close">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+
+        <div class="dialog-tabs" role="tablist">
+          <button class="dialog-tab is-active" id="jsonTab" role="tab" aria-selected="true" type="button">Paste JSON</button>
+          <button class="dialog-tab" id="aiTab" role="tab" aria-selected="false" type="button">Ask AI</button>
+        </div>
+
+        <div class="tab-panel is-active" id="jsonPanel" role="tabpanel">
+          <label class="field-label" for="jsonInput">PROGRAM JSON</label>
+          <textarea id="jsonInput" spellcheck="false" aria-describedby="jsonHint"></textarea>
+          <div class="input-footer">
+            <span id="jsonHint">Paste a valid program object</span>
+            <span class="example-actions">
+              <button class="mini-button" id="loadVideoExampleButton" type="button">Video example</button>
+              <button class="mini-button" id="loadExampleButton" type="button">Workout example</button>
+            </span>
+          </div>
+          <div class="error-message" id="jsonError" role="alert" hidden></div>
+          <button class="primary-button wide" id="saveProgramButton" type="button">
+            <span>Save program</span><i data-lucide="arrow-right"></i>
+          </button>
+        </div>
+
+        <div class="tab-panel" id="aiPanel" role="tabpanel">
+          <div class="ai-intro">
+            <span class="ai-spark"><i data-lucide="sparkles"></i></span>
+            <div>
+              <h3>Let AI do the planning</h3>
+              <p>Copy this prompt, add your goals and equipment, then paste the returned JSON in the other tab.</p>
+            </div>
+          </div>
+          <div class="prompt-box">
+            <pre id="aiPrompt"></pre>
+            <button class="copy-button" id="copyPromptButton" type="button">
+              <i data-lucide="copy"></i><span>Copy prompt</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog class="confirm-dialog" id="confirmDialog">
+      <div class="confirm-shell">
+        <div class="confirm-icon"><i data-lucide="log-out"></i></div>
+        <h2>End workout?</h2>
+        <p>Your current progress won’t be saved.</p>
+        <div class="confirm-actions">
+          <button class="secondary-button" id="continueWorkoutButton" type="button">Keep going</button>
+          <button class="danger-button" id="confirmExitButton" type="button">End workout</button>
+        </div>
+      </div>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">
+      <i data-lucide="check"></i><span>Copied</span>
+    </div>
+
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+    <script src="./app.js?v=8"></script>
+  </body>
+</html>

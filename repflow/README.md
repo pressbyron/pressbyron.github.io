@@ -1,0 +1,63 @@
+# Repflow
+
+A static, installable workout runner built for GitHub Pages. There is no build step and no package installation.
+
+## Run locally
+
+Serve this directory over HTTP, for example:
+
+```sh
+python3 -m http.server 8000
+```
+
+Then open `http://localhost:8000`.
+
+## Publish on GitHub Pages
+
+1. Push these files to a GitHub repository.
+2. Open **Settings → Pages** in the repository.
+3. Under **Build and deployment**, choose **Deploy from a branch**.
+4. Select the branch and `/ (root)`, then save.
+
+GitHub Pages supplies HTTPS, which enables installation and the offline service worker. On iPhone, open the published page in Safari, tap **Share**, then **Add to Home Screen**.
+
+## Program JSON
+
+Programs are imported in the app and stored in the browser. Each exercise uses either `reps` or `durationSeconds`:
+
+```json
+{
+  "title": "Core Express",
+  "description": "A short core session.",
+  "restSeconds": 30,
+  "exercises": [
+    {
+      "title": "Dead bug",
+      "sets": 3,
+      "reps": 10,
+      "description": "Reps are per side. Keep the lower back down."
+    },
+    {
+      "title": "Forearm plank",
+      "sets": 3,
+      "durationSeconds": 40,
+      "restSeconds": 45
+    }
+  ]
+}
+```
+
+The **Ask AI** tab in the app contains a complete, copyable prompt for generating compatible JSON.
+
+A YouTube follow-along video can also be saved as an entire program:
+
+```json
+{
+  "title": "Follow-Along Mobility",
+  "description": "A guided mobility session.",
+  "youtubeUrl": "https://www.youtube.com/watch?v=VIDEO_ID"
+}
+```
+
+YouTube programs open in a responsive embedded player. The program finishes automatically when the video reaches its ended state.
+An internet connection is required to load and play YouTube content.
