@@ -141,6 +141,8 @@ Programs are stored in `localStorage` under:
 repflow-programs-v1
 ```
 
+The internal optional `lastCompletedAt` ISO timestamp is persisted with each program and displayed as relative calendar days. A set-based workout earns completion once completed sets reach at least 90% of total sets. A video earns completion once the IFrame API reports playback at or beyond 90% of its duration; an ended or explicitly manually finished video also earns completion.
+
 Changing the stored representation should include a migration or a new versioned key. Do not silently make existing stored programs unreadable.
 
 ## PWA and offline behavior

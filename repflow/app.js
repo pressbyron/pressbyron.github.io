@@ -124,6 +124,7 @@ My goal, experience, available equipment, workout duration, and preferences are:
   let videoSession = null;
   let youtubePlayer = null;
   let youtubeApiPromise = null;
+  let videoProgressTimer = null;
 
   function loadPrograms() {
     try {
@@ -136,7 +137,7 @@ My goal, experience, available equipment, workout duration, and preferences are:
             && program?.description === "Kontrollerad styrka för överkropp, grepp och core. Vila ordentligt och håll varje rep ren.";
           if (isLegacyDummy || isSwedishStarter) {
             migrated = true;
-            return { ...normalizeProgram(EXAMPLE_PROGRAM), id: program.id };
+            return { ...normalizeProgram(EXAMPLE_PROGRAM), id: program.id, ...(program.lastCompletedAt ? { lastCompletedAt: program.lastCompletedAt } : {}) };
           }
           return normalizeProgram(program);
         });
@@ -170,7 +171,8 @@ My goal, experience, available equipment, workout duration, and preferences are:
         title: String(raw.title || "Untitled video program").trim(),
         description: String(raw.description || "").trim(),
         youtubeUrl: String(raw.youtubeUrl).trim(),
-        youtubeVideoId: videoId
+        youtubeVideoId: videoId,
+        ...(raw.lastCompletedAt ? { lastCompletedAt: String(raw.lastCompletedAt) } : {})
       };
     }
     return {
@@ -178,6 +180,7 @@ My goal, experience, available equipment, workout duration, and preferences are:
       title: String(raw.title || "Untitled program").trim(),
       description: String(raw.description || "").trim(),
       restSeconds: Number(raw.restSeconds) || 30,
+      ...(raw.lastCompletedAt ? { lastCompletedAt: String(raw.lastCompletedAt) } : {}),
       exercises: raw.exercises.map((exercise) => ({
         title: String(exercise.title).trim(),
         sets: Number(exercise.sets),
@@ -259,6 +262,7 @@ My goal, experience, available equipment, workout duration, and preferences are:
         <div class="card-orb"><i data-lucide="${isVideo ? "youtube" : index % 3 === 0 ? "dumbbell" : index % 3 === 1 ? "flame" : "activity"}"></i></div>
         <h3></h3>
         <p class="card-meta">${isVideo ? "Follow-along video workout" : `${program.exercises.length} exercises · ${totalSets(program)} sets`}</p>
+        ${program.lastCompletedAt ? `<p class="card-completed"><i data-lucide="circle-check"></i>${formatLastCompleted(program.lastCompletedAt)}</p>` : ""}
         <div class="card-bottom">
           <span class="card-duration"><i data-lucide="${isVideo ? "play-square" : "clock-3"}"></i> ${isVideo ? "WATCH & TRAIN" : `~${estimateMinutes(program)} MIN`}</span>
           <button class="start-button" type="button" aria-label="Start ${escapeHtml(program.title)}"><i data-lucide="play"></i></button>
@@ -285,6 +289,26 @@ My goal, experience, available equipment, workout duration, and preferences are:
 
   function totalSets(program) {
     return program.exercises?.reduce((sum, exercise) => sum + exercise.sets, 0) || 0;
+  }
+
+  function formatLastCompleted(value) {
+    const completed = new Date(value);
+    if (Number.isNaN(completed.getTime())) return "Last completed recently";
+    const now = new Date();
+    const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+    const completedUtc = Date.UTC(completed.getFullYear(), completed.getMonth(), completed.getDate());
+    const days = Math.max(0, Math.round((todayUtc - completedUtc) / 86400000));
+    if (days === 0) return "Last completed today";
+    return `Last completed ${days} ${days === 1 ? "day" : "days"} ago`;
+  }
+
+  function markProgramCompleted(program) {
+    const completedAt = new Date().toISOString();
+    program.lastCompletedAt = completedAt;
+    const storedProgram = programs.find((item) => item.id === program.id);
+    if (storedProgram) storedProgram.lastCompletedAt = completedAt;
+    persistPrograms();
+    renderPrograms();
   }
 
   function deleteProgram(id) {
@@ -382,6 +406,7 @@ My goal, experience, available equipment, workout duration, and preferences are:
   }
 
   function resetYouTubeMount() {
+    stopVideoProgressTracking();
     try { youtubePlayer?.destroy(); } catch (_) { /* The player may not be ready yet. */ }
     youtubePlayer = null;
     document.querySelector("#youtubePlayer")?.remove();
@@ -405,7 +430,7 @@ My goal, experience, available equipment, workout duration, and preferences are:
   async function startVideoProgram(program) {
     clearTimer();
     resetYouTubeMount();
-    videoSession = { program, startedAt: Date.now(), completed: false };
+    videoSession = { program, startedAt: Date.now(), completed: false, credited: false };
     els.videoTitle.textContent = program.title;
     els.videoDescription.textContent = program.description || "Follow along at your own pace. The program completes when the video ends.";
     els.videoCompletionHint.textContent = "This session finishes automatically when the video ends.";
@@ -428,8 +453,12 @@ My goal, experience, available equipment, workout duration, and preferences are:
       if (!videoSession || videoSession.program.id !== program.id) return;
       youtubePlayer = new YT.Player(iframe, {
         events: {
-          onReady: () => { els.videoLoading.hidden = true; },
+          onReady: () => {
+            els.videoLoading.hidden = true;
+            startVideoProgressTracking();
+          },
           onStateChange: (event) => {
+            checkVideoCompletionProgress();
             if (event.data === YT.PlayerState.ENDED) completeVideoProgram();
           },
           onError: (event) => showVideoError(event.data)
@@ -446,6 +475,30 @@ My goal, experience, available equipment, workout duration, and preferences are:
     els.videoCompletionHint.textContent = "When the video ends, finish the workout here.";
     els.finishVideo.hidden = false;
     showToast("Video ready · manual finish enabled", "play");
+  }
+
+  function startVideoProgressTracking() {
+    stopVideoProgressTracking();
+    checkVideoCompletionProgress();
+    videoProgressTimer = window.setInterval(checkVideoCompletionProgress, 1000);
+  }
+
+  function stopVideoProgressTracking() {
+    if (videoProgressTimer) window.clearInterval(videoProgressTimer);
+    videoProgressTimer = null;
+  }
+
+  function checkVideoCompletionProgress() {
+    if (!videoSession || videoSession.credited || !youtubePlayer?.getDuration) return;
+    try {
+      const duration = youtubePlayer.getDuration();
+      const currentTime = youtubePlayer.getCurrentTime();
+      if (duration > 0 && currentTime / duration >= 0.9) {
+        videoSession.credited = true;
+        markProgramCompleted(videoSession.program);
+        stopVideoProgressTracking();
+      }
+    } catch (_) { /* The player may not be ready or available in standalone mode. */ }
   }
 
   function showVideoError(errorCode) {
@@ -477,6 +530,11 @@ My goal, experience, available equipment, workout duration, and preferences are:
   function completeVideoProgram() {
     if (!videoSession || videoSession.completed) return;
     videoSession.completed = true;
+    if (!videoSession.credited) {
+      videoSession.credited = true;
+      markProgramCompleted(videoSession.program);
+    }
+    stopVideoProgressTracking();
     const elapsed = Math.max(1, Math.round((Date.now() - videoSession.startedAt) / 1000));
     try { youtubePlayer?.destroy(); } catch (_) { /* Player is already ending. */ }
     youtubePlayer = null;
@@ -498,7 +556,7 @@ My goal, experience, available equipment, workout duration, and preferences are:
     workout = {
       program, exerciseIndex: 0, setIndex: 0, phase: "work", remaining: 0, timerTotal: 0,
       running: false, muted: false, startedAt: Date.now(), nextTarget: null,
-      lastBeepSecond: null, workTimerStarted: false
+      lastBeepSecond: null, workTimerStarted: false, credited: false
     };
     showView(els.workout);
     requestWakeLock();
@@ -644,6 +702,7 @@ My goal, experience, available equipment, workout duration, and preferences are:
   }
 
   function completeWorkSet(timerAlreadySignaled = false) {
+    creditWorkoutAtThreshold();
     const next = getNextTarget();
     if (!next) {
       completeWorkout(!timerAlreadySignaled);
@@ -654,6 +713,20 @@ My goal, experience, available equipment, workout duration, and preferences are:
     workout.nextTarget = next;
     setupTimer(restSeconds, true);
     renderWorkout();
+  }
+
+  function creditWorkoutAtThreshold() {
+    if (!workout || workout.credited) return;
+    let completedBeforeCurrent = 0;
+    workout.program.exercises.forEach((exercise, index) => {
+      if (index < workout.exerciseIndex) completedBeforeCurrent += exercise.sets;
+      if (index === workout.exerciseIndex) completedBeforeCurrent += workout.setIndex;
+    });
+    const completedIncludingCurrent = completedBeforeCurrent + 1;
+    if (completedIncludingCurrent / totalSets(workout.program) >= 0.9) {
+      workout.credited = true;
+      markProgramCompleted(workout.program);
+    }
   }
 
   function getNextTarget() {
@@ -710,6 +783,7 @@ My goal, experience, available equipment, workout duration, and preferences are:
 
   function completeWorkout(playFinishSound = true) {
     clearTimer();
+    if (!workout.credited) markProgramCompleted(workout.program);
     if (playFinishSound) beep(true);
     const elapsed = Math.max(1, Math.round((Date.now() - workout.startedAt) / 1000));
     els.finishTime.textContent = formatTime(elapsed);
@@ -806,6 +880,7 @@ My goal, experience, available equipment, workout duration, and preferences are:
 
   function exitWorkout() {
     clearTimer();
+    stopVideoProgressTracking();
     try { youtubePlayer?.destroy(); } catch (_) { /* Player may still be loading. */ }
     youtubePlayer = null;
     videoSession = null;
