@@ -25,6 +25,8 @@ The application lets users:
 - `assets/`: PWA, favicon, and Apple touch icons.
 - `README.md`: User-facing local development and deployment instructions.
 
+SortableJS `1.15.7` is loaded from jsDelivr for touch-friendly exercise ordering in the visual builder. The rest of the builder must remain usable if that CDN script is unavailable; only drag reordering may degrade.
+
 ## Development constraints
 
 - Keep the project directly deployable to GitHub Pages.
@@ -102,6 +104,18 @@ If the schema changes, update all of the following together:
 4. `AI_PROMPT` in `app.js`.
 5. The schema example in `README.md`.
 6. This document.
+
+## Visual routine builder
+
+The visual builder and JSON importer both produce the same routine object and pass it through `validateRoutine()` and `normalizeRoutine()`. `editingRoutineId` distinguishes create from edit. Editing must preserve the existing routine ID and `lastCompletedAt` timestamp.
+
+Exercise editor rows are read in their current DOM order when saved. SortableJS reorders those DOM nodes using `.drag-handle`; do not maintain a second order array that can drift from the visible sequence. The builder supports:
+
+- Exercise and YouTube routine types.
+- Routine title and optional description.
+- Routine-level default rest.
+- Exercise title, sets, repetitions or duration, optional cue, and optional rest override.
+- Adding, removing, and reordering exercises.
 
 ## Workout state machine
 

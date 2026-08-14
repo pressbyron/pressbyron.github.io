@@ -51,6 +51,8 @@ The JSON importer adds a routine to that program. Each exercise uses either `rep
 
 The **Ask AI** tab in the app contains a complete, copyable prompt for generating compatible JSON.
 
+The **Visual builder** tab can create routines without JSON. It supports exercise and YouTube routines, routine-level default rest, per-exercise rest overrides, rep- or timer-based exercises, and drag-and-drop exercise ordering. Use the pencil button on any routine card to edit it with the same builder.
+
 A YouTube follow-along video can also be saved as a routine:
 
 ```json

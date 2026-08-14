@@ -94,8 +94,8 @@ My goal, experience, available equipment, workout duration, and preferences are:
     home: $("#homeView"), workout: $("#workoutView"), video: $("#videoView"), finish: $("#finishView"),
     grid: $("#programGrid"), count: $("#programCount"),
     create: $("#createButton"), install: $("#installButton"), dialog: $("#programDialog"),
-    closeDialog: $("#closeDialogButton"), jsonTab: $("#jsonTab"), aiTab: $("#aiTab"),
-    jsonPanel: $("#jsonPanel"), aiPanel: $("#aiPanel"), jsonInput: $("#jsonInput"),
+    closeDialog: $("#closeDialogButton"), dialogTitle: $("#dialogTitle"), jsonTab: $("#jsonTab"), visualTab: $("#visualTab"), aiTab: $("#aiTab"),
+    jsonPanel: $("#jsonPanel"), visualPanel: $("#visualPanel"), aiPanel: $("#aiPanel"), jsonInput: $("#jsonInput"),
     jsonError: $("#jsonError"), loadExample: $("#loadExampleButton"), loadVideoExample: $("#loadVideoExampleButton"), saveProgram: $("#saveProgramButton"),
     aiPrompt: $("#aiPrompt"), copyPrompt: $("#copyPromptButton"), toast: $("#toast"),
     programName: $("#workoutProgramName"), exit: $("#exitWorkoutButton"), sound: $("#soundButton"),
@@ -110,6 +110,10 @@ My goal, experience, available equipment, workout duration, and preferences are:
     videoTitle: $("#videoProgramTitle"), videoDescription: $("#videoProgramDescription"), videoLoading: $("#videoLoading"),
     youtubePlayer: $("#youtubePlayer"), exitVideo: $("#exitVideoButton"), finishVideo: $("#finishVideoButton"),
     videoCompletionHint: $("#videoCompletionHint"),
+    exerciseKind: $("#exerciseKindButton"), videoKind: $("#videoKindButton"), builderTitle: $("#builderTitle"),
+    builderDescription: $("#builderDescription"), exerciseBuilder: $("#exerciseBuilder"), videoBuilder: $("#videoBuilder"),
+    builderDefaultRest: $("#builderDefaultRest"), exerciseBuilderList: $("#exerciseBuilderList"), addExercise: $("#addExerciseButton"),
+    builderYoutubeUrl: $("#builderYoutubeUrl"), builderError: $("#builderError"), saveBuilder: $("#saveBuilderButton"),
     finishTime: $("#finishTime"), finishTimeLabel: $("#finishTimeLabel"),
     finishExercises: $("#finishExercises"), finishExercisesLabel: $("#finishExercisesLabel"),
     finishSets: $("#finishSets"), finishSetsLabel: $("#finishSetsLabel"), finishButton: $("#finishButton")
@@ -127,6 +131,9 @@ My goal, experience, available equipment, workout duration, and preferences are:
   let youtubePlayer = null;
   let youtubeApiPromise = null;
   let videoProgressTimer = null;
+  let editingRoutineId = null;
+  let builderKind = "exercise";
+  let exerciseSortable = null;
 
   function loadPrograms() {
     try {
@@ -359,7 +366,10 @@ My goal, experience, available equipment, workout duration, and preferences are:
     card.innerHTML = `
       <div class="card-top">
         <span class="card-type">${isVideo ? "VIDEO" : "ROUTINE"} ${String(index + 1).padStart(2, "0")}</span>
-        <button class="card-menu" type="button" aria-label="Delete ${escapeHtml(routine.title)}"><i data-lucide="trash-2"></i></button>
+        <span class="card-actions">
+          <button class="card-menu edit-routine-button" type="button" aria-label="Edit ${escapeHtml(routine.title)}"><i data-lucide="pencil"></i></button>
+          <button class="card-menu delete-routine-button" type="button" aria-label="Delete ${escapeHtml(routine.title)}"><i data-lucide="trash-2"></i></button>
+        </span>
       </div>
       <div class="card-orb"><i data-lucide="${isVideo ? "youtube" : index % 3 === 0 ? "dumbbell" : index % 3 === 1 ? "flame" : "activity"}"></i></div>
       <h3></h3>
@@ -371,7 +381,8 @@ My goal, experience, available equipment, workout duration, and preferences are:
       </div>`;
     card.querySelector("h3").textContent = routine.title;
     card.querySelector(".start-button").addEventListener("click", () => isVideo ? startVideoProgram(routine) : startWorkout(routine));
-    card.querySelector(".card-menu").addEventListener("click", () => deleteRoutine(routine.id));
+    card.querySelector(".edit-routine-button").addEventListener("click", () => openRoutineEditor(routine));
+    card.querySelector(".delete-routine-button").addEventListener("click", () => deleteRoutine(routine.id));
     return card;
   }
 
@@ -427,21 +438,196 @@ My goal, experience, available equipment, workout duration, and preferences are:
   }
 
   function openProgramDialog() {
+    editingRoutineId = null;
+    els.dialogTitle.textContent = "Add a routine";
+    els.jsonTab.hidden = false;
+    els.aiTab.hidden = false;
     els.jsonError.hidden = true;
+    resetVisualBuilder();
+    selectDialogTab("visual");
     els.dialog.showModal();
-    setTimeout(() => els.jsonInput.focus(), 100);
+    ensureExerciseSortable();
+    setTimeout(() => els.builderTitle.focus(), 100);
   }
 
   function closeProgramDialog() { els.dialog.close(); }
 
   function selectDialogTab(tab) {
-    const isJson = tab === "json";
-    els.jsonTab.classList.toggle("is-active", isJson);
-    els.aiTab.classList.toggle("is-active", !isJson);
-    els.jsonTab.setAttribute("aria-selected", String(isJson));
-    els.aiTab.setAttribute("aria-selected", String(!isJson));
-    els.jsonPanel.classList.toggle("is-active", isJson);
-    els.aiPanel.classList.toggle("is-active", !isJson);
+    const tabs = [
+      ["json", els.jsonTab, els.jsonPanel],
+      ["visual", els.visualTab, els.visualPanel],
+      ["ai", els.aiTab, els.aiPanel]
+    ];
+    tabs.forEach(([name, button, panel]) => {
+      const active = name === tab;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-selected", String(active));
+      panel.classList.toggle("is-active", active);
+    });
+    if (tab === "visual") ensureExerciseSortable();
+  }
+
+  function openRoutineEditor(routine) {
+    editingRoutineId = routine.id;
+    els.dialogTitle.textContent = "Edit routine";
+    els.jsonTab.hidden = true;
+    els.aiTab.hidden = true;
+    populateVisualBuilder(routine);
+    selectDialogTab("visual");
+    els.dialog.showModal();
+    ensureExerciseSortable();
+    setTimeout(() => els.builderTitle.focus(), 100);
+  }
+
+  function resetVisualBuilder() {
+    els.builderTitle.value = "";
+    els.builderDescription.value = "";
+    els.builderDefaultRest.value = "30";
+    els.builderYoutubeUrl.value = "";
+    els.builderError.hidden = true;
+    els.exerciseBuilderList.replaceChildren();
+    setBuilderKind("exercise");
+    addExerciseEditor();
+  }
+
+  function populateVisualBuilder(routine) {
+    els.builderTitle.value = routine.title;
+    els.builderDescription.value = routine.description || "";
+    els.builderError.hidden = true;
+    els.exerciseBuilderList.replaceChildren();
+    if (routine.youtubeVideoId) {
+      setBuilderKind("video");
+      els.builderYoutubeUrl.value = routine.youtubeUrl;
+      els.builderDefaultRest.value = "30";
+    } else {
+      setBuilderKind("exercise");
+      els.builderDefaultRest.value = String(routine.restSeconds || 30);
+      routine.exercises.forEach(addExerciseEditor);
+    }
+  }
+
+  function setBuilderKind(kind) {
+    builderKind = kind;
+    const isExercise = kind === "exercise";
+    els.exerciseKind.classList.toggle("is-active", isExercise);
+    els.videoKind.classList.toggle("is-active", !isExercise);
+    els.exerciseBuilder.hidden = !isExercise;
+    els.videoBuilder.hidden = isExercise;
+    refreshIcons();
+  }
+
+  function addExerciseEditor(exercise = {}) {
+    const isTimed = exercise.durationSeconds != null;
+    const item = document.createElement("div");
+    item.className = "exercise-builder-item";
+    item.innerHTML = `
+      <div class="exercise-builder-top">
+        <button class="drag-handle" type="button" aria-label="Drag to reorder"><i data-lucide="grip-vertical"></i><span>EXERCISE <b class="drag-index"></b></span></button>
+        <button class="remove-exercise-button" type="button" aria-label="Remove exercise"><i data-lucide="trash-2"></i></button>
+      </div>
+      <div class="exercise-builder-grid">
+        <label class="exercise-field exercise-field-title"><span>TITLE</span><input class="exercise-title-input" type="text" placeholder="Exercise name" /></label>
+        <label class="exercise-field"><span>MEASURE</span><select class="exercise-measure"><option value="reps">Repetitions</option><option value="timer">Timer</option></select></label>
+        <label class="exercise-field"><span class="exercise-value-label">REPS</span><input class="exercise-value" type="number" min="1" step="1" /></label>
+        <label class="exercise-field"><span>SETS</span><input class="exercise-sets" type="number" min="1" step="1" /></label>
+        <label class="exercise-field"><span>REST SEC</span><input class="exercise-rest" type="number" min="1" step="1" placeholder="Default" /></label>
+        <label class="exercise-field exercise-field-description"><span>DESCRIPTION / FORM CUE</span><input class="exercise-description-input" type="text" placeholder="Optional coaching cue" /></label>
+      </div>`;
+    item.querySelector(".exercise-title-input").value = exercise.title || "";
+    item.querySelector(".exercise-measure").value = isTimed ? "timer" : "reps";
+    item.querySelector(".exercise-value").value = String(isTimed ? exercise.durationSeconds : exercise.reps || 10);
+    item.querySelector(".exercise-sets").value = String(exercise.sets || 3);
+    item.querySelector(".exercise-rest").value = exercise.restSeconds || "";
+    item.querySelector(".exercise-description-input").value = exercise.description || "";
+    updateExerciseMeasure(item);
+    item.querySelector(".exercise-measure").addEventListener("change", () => updateExerciseMeasure(item));
+    item.querySelector(".remove-exercise-button").addEventListener("click", () => {
+      item.remove();
+      updateExerciseEditorNumbers();
+    });
+    els.exerciseBuilderList.appendChild(item);
+    updateExerciseEditorNumbers();
+    refreshIcons();
+  }
+
+  function updateExerciseMeasure(item) {
+    const timed = item.querySelector(".exercise-measure").value === "timer";
+    item.querySelector(".exercise-value-label").textContent = timed ? "SECONDS" : "REPS";
+  }
+
+  function updateExerciseEditorNumbers() {
+    [...els.exerciseBuilderList.children].forEach((item, index) => {
+      item.querySelector(".drag-index").textContent = String(index + 1).padStart(2, "0");
+    });
+  }
+
+  function ensureExerciseSortable() {
+    if (exerciseSortable || !window.Sortable) return;
+    exerciseSortable = new window.Sortable(els.exerciseBuilderList, {
+      animation: 180,
+      handle: ".drag-handle",
+      ghostClass: "is-dragging",
+      forceFallback: true,
+      fallbackTolerance: 4,
+      onEnd: updateExerciseEditorNumbers
+    });
+  }
+
+  function readVisualBuilder() {
+    const routine = {
+      title: els.builderTitle.value.trim(),
+      description: els.builderDescription.value.trim()
+    };
+    if (builderKind === "video") {
+      routine.youtubeUrl = els.builderYoutubeUrl.value.trim();
+      return routine;
+    }
+
+    routine.restSeconds = Number(els.builderDefaultRest.value);
+    routine.exercises = [...els.exerciseBuilderList.children].map((item) => {
+      const timed = item.querySelector(".exercise-measure").value === "timer";
+      const restValue = item.querySelector(".exercise-rest").value.trim();
+      return {
+        title: item.querySelector(".exercise-title-input").value.trim(),
+        sets: Number(item.querySelector(".exercise-sets").value),
+        ...(timed
+          ? { durationSeconds: Number(item.querySelector(".exercise-value").value) }
+          : { reps: Number(item.querySelector(".exercise-value").value) }),
+        ...(item.querySelector(".exercise-description-input").value.trim()
+          ? { description: item.querySelector(".exercise-description-input").value.trim() }
+          : {}),
+        ...(restValue ? { restSeconds: Number(restValue) } : {})
+      };
+    });
+    return routine;
+  }
+
+  function saveVisualBuilder() {
+    try {
+      const rawRoutine = readVisualBuilder();
+      validateRoutine(rawRoutine);
+      const normalized = normalizeRoutine(rawRoutine);
+      if (editingRoutineId) {
+        const existing = findRoutine(editingRoutineId);
+        normalized.id = editingRoutineId;
+        if (existing?.lastCompletedAt) normalized.lastCompletedAt = existing.lastCompletedAt;
+        programs.forEach((program) => {
+          const index = program.routines.findIndex((routine) => routine.id === editingRoutineId);
+          if (index >= 0) program.routines[index] = normalized;
+        });
+      } else {
+        programs[0].routines.unshift(normalized);
+      }
+      expandedProgramIds.add(programs[0].id);
+      persistPrograms();
+      renderPrograms();
+      closeProgramDialog();
+      showToast(editingRoutineId ? "Routine updated" : "Routine saved");
+      editingRoutineId = null;
+    } catch (error) {
+      els.builderError.textContent = error.message;
+      els.builderError.hidden = false;
+    }
   }
 
   function saveProgram() {
@@ -1021,7 +1207,12 @@ My goal, experience, available equipment, workout duration, and preferences are:
   els.closeDialog.addEventListener("click", closeProgramDialog);
   els.dialog.addEventListener("click", (event) => { if (event.target === els.dialog) closeProgramDialog(); });
   els.jsonTab.addEventListener("click", () => selectDialogTab("json"));
+  els.visualTab.addEventListener("click", () => selectDialogTab("visual"));
   els.aiTab.addEventListener("click", () => selectDialogTab("ai"));
+  els.exerciseKind.addEventListener("click", () => setBuilderKind("exercise"));
+  els.videoKind.addEventListener("click", () => setBuilderKind("video"));
+  els.addExercise.addEventListener("click", () => addExerciseEditor());
+  els.saveBuilder.addEventListener("click", saveVisualBuilder);
   els.loadExample.addEventListener("click", () => { els.jsonInput.value = JSON.stringify(EXAMPLE_PROGRAM, null, 2); els.jsonError.hidden = true; });
   els.loadVideoExample.addEventListener("click", () => { els.jsonInput.value = JSON.stringify(VIDEO_EXAMPLE_PROGRAM, null, 2); els.jsonError.hidden = true; });
   els.saveProgram.addEventListener("click", saveProgram);
