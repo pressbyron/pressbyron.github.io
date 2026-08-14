@@ -6,20 +6,20 @@ Repflow is a static, installable workout application designed for GitHub Pages. 
 
 The application lets users:
 
-- Import workout programs as JSON.
-- Store programs locally in the browser.
+- Organize workout routines inside expandable training programs.
+- Import workout routines as JSON and store the library locally in the browser.
 - Run rep-based and time-based exercises.
-- Run a YouTube follow-along video as an entire program.
+- Run a YouTube follow-along video as an entire routine.
 - Move through timed rest periods between sets.
 - See workout progress and the next set at all times.
-- Copy an AI prompt that generates compatible program JSON.
+- Copy an AI prompt that generates compatible routine JSON.
 - Install the site as a PWA, including on the iOS home screen.
 
 ## Important files
 
 - `index.html`: Application markup, views, dialogs, metadata, and CDN references.
 - `styles.css`: Complete responsive visual system and animations.
-- `app.js`: Program storage, validation, UI rendering, workout state machine, timers, sounds, wake lock, and installation flow.
+- `app.js`: Program/routine storage, migration, validation, UI rendering, workout state machine, timers, sounds, wake lock, and installation flow.
 - `manifest.webmanifest`: PWA metadata and icon declarations.
 - `sw.js`: Offline application-shell cache.
 - `assets/`: PWA, favicon, and Apple touch icons.
@@ -34,15 +34,26 @@ The application lets users:
 - Keep local URLs relative so project pages work below a repository subpath.
 - PWA icons and application files remain local because they must be available to the manifest and offline cache.
 - Do not rely on API keys, secrets, or environment variables in client-side code.
-- User programs must remain private to their browser unless an explicit synchronization feature is added.
+- User programs and routines must remain private to their browser unless an explicit synchronization feature is added.
 
-## Program JSON schema
+## Program and routine schema
 
-Exercise programs use this structure:
+Programs are internal library groups with this shape:
 
 ```json
 {
-  "title": "Program name",
+  "id": "week-1-12",
+  "title": "Week 1–12",
+  "description": "Program summary",
+  "routines": []
+}
+```
+
+The user-facing JSON importer accepts individual routines, not a program wrapper. Exercise routines use this structure:
+
+```json
+{
+  "title": "Routine name",
   "description": "Optional summary",
   "restSeconds": 30,
   "exercises": [
@@ -62,7 +73,7 @@ Exercise programs use this structure:
 }
 ```
 
-YouTube programs use this alternative structure:
+YouTube routines use this alternative structure:
 
 ```json
 {
@@ -74,19 +85,19 @@ YouTube programs use this alternative structure:
 
 Schema rules:
 
-- An exercise program requires a non-empty `title` and at least one exercise.
-- A YouTube program requires a valid YouTube `youtubeUrl` and must not contain `exercises`.
-- Exercise and YouTube program shapes are mutually exclusive.
+- An exercise routine requires a non-empty `title` and at least one exercise.
+- A YouTube routine requires a valid YouTube `youtubeUrl` and must not contain `exercises`.
+- Exercise and YouTube routine shapes are mutually exclusive.
 - Every exercise requires a non-empty `title` and positive integer `sets`.
 - Every exercise must contain exactly one of `reps` or `durationSeconds`.
 - `reps`, `durationSeconds`, and `restSeconds` must be positive whole numbers.
-- Exercise-level `restSeconds` overrides the program default.
+- Exercise-level `restSeconds` overrides the routine default.
 - Descriptions are optional strings.
 
 If the schema changes, update all of the following together:
 
-1. `validateProgram()` in `app.js`.
-2. `normalizeProgram()` in `app.js`.
+1. `validateRoutine()` in `app.js`.
+2. `normalizeRoutine()` in `app.js`.
 3. `EXAMPLE_PROGRAM` in `app.js`.
 4. `AI_PROMPT` in `app.js`.
 5. The schema example in `README.md`.
@@ -96,7 +107,7 @@ If the schema changes, update all of the following together:
 
 The active workout is held in the `workout` object in `app.js`.
 
-YouTube programs use the separate `videoSession` state. Render the iframe directly before loading the YouTube IFrame API so playback is not gated by the API script in iOS standalone mode. The API attaches to that existing iframe, and `YT.PlayerState.ENDED` must call `completeVideoProgram()`. If the event API cannot load, retain playback and expose the manual finish fallback. Destroy the player or iframe when the video completes or the user exits so audio and playback cannot continue in the background.
+YouTube routines use the separate `videoSession` state. Render the iframe directly before loading the YouTube IFrame API so playback is not gated by the API script in iOS standalone mode. The API attaches to that existing iframe, and `YT.PlayerState.ENDED` must call `completeVideoProgram()`. If the event API cannot load, retain playback and expose the manual finish fallback. Destroy the player or iframe when the video completes or the user exits so audio and playback cannot continue in the background.
 
 The two main phases are:
 
@@ -135,13 +146,17 @@ Important behavior to preserve:
 
 ## Persistence
 
-Programs are stored in `localStorage` under:
+The hierarchical program library is stored in `localStorage` under:
 
 ```text
-repflow-programs-v1
+repflow-library-v2
 ```
 
-The internal optional `lastCompletedAt` ISO timestamp is persisted with each program and displayed as relative calendar days. A set-based workout earns completion once completed sets reach at least 90% of total sets. A video earns completion once the IFrame API reports playback at or beyond 90% of its duration; an ended or explicitly manually finished video also earns completion.
+The old flat `repflow-programs-v1` array is a read-only migration source. Its entries are converted into routines inside the **Week 1–12** program without losing IDs or completion history.
+
+`dedupeRoutines()` runs during migration and every library load. Video routines are identified by YouTube video ID; exercise routines are identified by normalized title. Keep the first routine ID and preserve the newest `lastCompletedAt` value when merging duplicates.
+
+The internal optional `lastCompletedAt` ISO timestamp is persisted with each routine and displayed as relative calendar days. A set-based routine earns completion once completed sets reach at least 90% of total sets. A video earns completion once the IFrame API reports playback at or beyond 90% of its duration; an ended or explicitly manually finished video also earns completion.
 
 Changing the stored representation should include a migration or a new versioned key. Do not silently make existing stored programs unreadable.
 
@@ -173,14 +188,15 @@ python3 -m http.server 8000
 
 Before handing off a change, verify at minimum:
 
-- A rep-based program can complete all sets.
+- A program expands to show its routines.
+- A rep-based routine can complete all sets.
 - A timed exercise can start, pause, resume, and finish.
 - A rest timer can pause and skip.
 - A YouTube URL imports successfully and its ended event reaches the finish screen.
 - The next-up card is correct across exercise boundaries.
 - Progress reaches the finish screen without an extra or missing set.
 - Valid JSON imports successfully and invalid JSON shows a helpful error.
-- Stored programs survive a reload.
+- Stored programs, routines, and completion dates survive a reload.
 - The layout remains usable at phone width.
 - Every file listed in `APP_SHELL` exists.
 

@@ -1,8 +1,9 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "repflow-programs-v1";
-  const DEFAULT_VIDEO_MIGRATION_KEY = "repflow-default-videos-v1";
+  const STORAGE_KEY = "repflow-library-v2";
+  const LEGACY_STORAGE_KEY = "repflow-programs-v1";
+  const DEFAULT_PROGRAM_ID = "week-1-12";
   const TIMER_CIRCUMFERENCE = 622;
 
   const EXAMPLE_PROGRAM = {
@@ -47,11 +48,11 @@
     }
   ];
 
-  const AI_PROMPT = `Create a program for the Repflow app and return ONLY valid JSON — no markdown fences or explanation.
+  const AI_PROMPT = `Create a workout routine for the Repflow app and return ONLY valid JSON — no markdown fences or explanation.
 
-For a traditional exercise workout, use exactly this structure:
+For a traditional exercise routine, use exactly this structure:
 {
-  "title": "Program name",
+  "title": "Routine name",
   "description": "Short optional summary",
   "restSeconds": 30,
   "exercises": [
@@ -71,19 +72,19 @@ For a traditional exercise workout, use exactly this structure:
   ]
 }
 
-For a follow-along YouTube workout, use exactly this structure instead:
+For a follow-along YouTube routine, use exactly this structure instead:
 {
-  "title": "Video program name",
+  "title": "Video routine name",
   "description": "Short optional summary",
   "youtubeUrl": "https://www.youtube.com/watch?v=VIDEO_ID"
 }
 
 Rules:
-- Create either an exercises program OR a YouTube program, never both.
+- Create either an exercise routine OR a YouTube routine, never both.
 - Every exercise needs title and sets.
 - Use either reps OR durationSeconds for each exercise, never both.
 - All number values must be positive whole numbers.
-- restSeconds is optional per exercise and overrides the program default.
+- restSeconds is optional per exercise and overrides the routine default.
 - Keep descriptions short enough to read during training.
 
 My goal, experience, available equipment, workout duration, and preferences are: [REPLACE THIS WITH MY DETAILS]`;
@@ -115,6 +116,7 @@ My goal, experience, available equipment, workout duration, and preferences are:
   };
 
   let programs = loadPrograms();
+  const expandedProgramIds = new Set();
   let workout = null;
   let timerId = null;
   let deferredInstallPrompt = null;
@@ -128,47 +130,93 @@ My goal, experience, available equipment, workout duration, and preferences are:
 
   function loadPrograms() {
     try {
-      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (Array.isArray(stored) && stored.length) {
-        let migrated = false;
-        const loaded = stored.map((program) => {
-          const isLegacyDummy = program?.title === "Full Body Ignite";
-          const isSwedishStarter = program?.title === "Upper Body + Abs Strength"
-            && program?.description === "Kontrollerad styrka för överkropp, grepp och core. Vila ordentligt och håll varje rep ren.";
-          if (isLegacyDummy || isSwedishStarter) {
-            migrated = true;
-            return { ...normalizeProgram(EXAMPLE_PROGRAM), id: program.id, ...(program.lastCompletedAt ? { lastCompletedAt: program.lastCompletedAt } : {}) };
-          }
-          return normalizeProgram(program);
-        });
-        if (!localStorage.getItem(DEFAULT_VIDEO_MIGRATION_KEY)) {
-          DEFAULT_VIDEO_PROGRAMS.forEach((defaultProgram) => {
-            const videoId = extractYouTubeVideoId(defaultProgram.youtubeUrl);
-            if (!loaded.some((program) => program.youtubeVideoId === videoId)) {
-              loaded.push(normalizeProgram(defaultProgram));
-              migrated = true;
-            }
-          });
-          localStorage.setItem(DEFAULT_VIDEO_MIGRATION_KEY, "1");
-        }
-        if (migrated) localStorage.setItem(STORAGE_KEY, JSON.stringify(loaded));
-        return loaded;
+      const storedLibrary = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (Array.isArray(storedLibrary) && storedLibrary.length) {
+        const normalizedLibrary = storedLibrary.map(normalizeProgramGroup);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedLibrary));
+        return normalizedLibrary;
       }
-    } catch (_) { /* Fall back to the starter program. */ }
-    try { localStorage.setItem(DEFAULT_VIDEO_MIGRATION_KEY, "1"); } catch (_) { /* Storage may be unavailable. */ }
-    return [EXAMPLE_PROGRAM, ...DEFAULT_VIDEO_PROGRAMS].map(normalizeProgram);
+
+      const legacyRoutines = JSON.parse(localStorage.getItem(LEGACY_STORAGE_KEY));
+      if (Array.isArray(legacyRoutines) && legacyRoutines.length) {
+        const migratedProgram = createProgramGroup(migrateLegacyRoutines(legacyRoutines));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify([migratedProgram]));
+        return [migratedProgram];
+      }
+    } catch (_) { /* Fall back to a fresh default library. */ }
+
+    const defaultProgram = createProgramGroup([EXAMPLE_PROGRAM, ...DEFAULT_VIDEO_PROGRAMS]);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify([defaultProgram])); } catch (_) { /* Storage may be unavailable. */ }
+    return [defaultProgram];
+  }
+
+  function createProgramGroup(routines) {
+    return {
+      id: DEFAULT_PROGRAM_ID,
+      title: "Week 1–12",
+      description: "A balanced 12-week strength plan with three repeatable routines.",
+      routines: dedupeRoutines(routines.map(normalizeRoutine))
+    };
+  }
+
+  function normalizeProgramGroup(raw) {
+    return {
+      id: raw.id || crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`,
+      title: String(raw.title || "Untitled program").trim(),
+      description: String(raw.description || "").trim(),
+      routines: Array.isArray(raw.routines) ? dedupeRoutines(raw.routines.map(normalizeRoutine)) : []
+    };
+  }
+
+  function migrateLegacyRoutines(stored) {
+    const routines = stored.map((routine) => {
+      const isLegacyDummy = routine?.title === "Full Body Ignite";
+      const isSwedishStarter = routine?.title === "Upper Body + Abs Strength"
+        && routine?.description === "Kontrollerad styrka för överkropp, grepp och core. Vila ordentligt och håll varje rep ren.";
+      if (isLegacyDummy || isSwedishStarter) {
+        return { ...normalizeRoutine(EXAMPLE_PROGRAM), id: routine.id, ...(routine.lastCompletedAt ? { lastCompletedAt: routine.lastCompletedAt } : {}) };
+      }
+      return normalizeRoutine(routine);
+    });
+
+    DEFAULT_VIDEO_PROGRAMS.forEach((defaultRoutine) => {
+      const videoId = extractYouTubeVideoId(defaultRoutine.youtubeUrl);
+      if (!routines.some((routine) => routine.youtubeVideoId === videoId)) routines.push(normalizeRoutine(defaultRoutine));
+    });
+    return routines;
+  }
+
+  function dedupeRoutines(routines) {
+    const unique = [];
+    const seen = new Map();
+    routines.forEach((routine) => {
+      const identity = routine.youtubeVideoId
+        ? `video:${routine.youtubeVideoId}`
+        : `exercise:${routine.title.trim().toLocaleLowerCase()}`;
+      const existing = seen.get(identity);
+      if (!existing) {
+        seen.set(identity, routine);
+        unique.push(routine);
+        return;
+      }
+
+      const existingCompleted = existing.lastCompletedAt ? new Date(existing.lastCompletedAt).getTime() || 0 : 0;
+      const duplicateCompleted = routine.lastCompletedAt ? new Date(routine.lastCompletedAt).getTime() || 0 : 0;
+      if (duplicateCompleted > existingCompleted) existing.lastCompletedAt = routine.lastCompletedAt;
+    });
+    return unique;
   }
 
   function persistPrograms() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(programs));
   }
 
-  function normalizeProgram(raw) {
+  function normalizeRoutine(raw) {
     const videoId = raw.youtubeUrl ? extractYouTubeVideoId(raw.youtubeUrl) : null;
     if (videoId) {
       return {
         id: raw.id || crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`,
-        title: String(raw.title || "Untitled video program").trim(),
+        title: String(raw.title || "Untitled video routine").trim(),
         description: String(raw.description || "").trim(),
         youtubeUrl: String(raw.youtubeUrl).trim(),
         youtubeVideoId: videoId,
@@ -177,7 +225,7 @@ My goal, experience, available equipment, workout duration, and preferences are:
     }
     return {
       id: raw.id || crypto.randomUUID?.() || `${Date.now()}-${Math.random()}`,
-      title: String(raw.title || "Untitled program").trim(),
+      title: String(raw.title || "Untitled routine").trim(),
       description: String(raw.description || "").trim(),
       restSeconds: Number(raw.restSeconds) || 30,
       ...(raw.lastCompletedAt ? { lastCompletedAt: String(raw.lastCompletedAt) } : {}),
@@ -192,18 +240,18 @@ My goal, experience, available equipment, workout duration, and preferences are:
     };
   }
 
-  function validateProgram(value) {
-    if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("The JSON must contain one program object.");
-    if (typeof value.title !== "string" || !value.title.trim()) throw new Error("Add a program title.");
+  function validateRoutine(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("The JSON must contain one routine object.");
+    if (typeof value.title !== "string" || !value.title.trim()) throw new Error("Add a routine title.");
     if (value.youtubeUrl != null) {
       if (typeof value.youtubeUrl !== "string" || !extractYouTubeVideoId(value.youtubeUrl)) {
         throw new Error("Add a valid YouTube video URL.");
       }
-      if (value.exercises != null) throw new Error("A program cannot contain both youtubeUrl and exercises.");
+      if (value.exercises != null) throw new Error("A routine cannot contain both youtubeUrl and exercises.");
       return;
     }
     if (!Array.isArray(value.exercises) || !value.exercises.length) throw new Error("Add at least one exercise.");
-    if (value.restSeconds != null && !isPositiveInteger(value.restSeconds)) throw new Error("Program restSeconds must be a positive whole number.");
+    if (value.restSeconds != null && !isPositiveInteger(value.restSeconds)) throw new Error("Routine restSeconds must be a positive whole number.");
 
     value.exercises.forEach((exercise, index) => {
       const position = `Exercise ${index + 1}`;
@@ -250,37 +298,81 @@ My goal, experience, available equipment, workout duration, and preferences are:
 
   function renderPrograms() {
     els.grid.replaceChildren();
-    programs.forEach((program, index) => {
-      const isVideo = Boolean(program.youtubeVideoId);
-      const card = document.createElement("article");
-      card.className = "program-card";
-      card.innerHTML = `
-        <div class="card-top">
-          <span class="card-type">${isVideo ? "VIDEO" : "PROGRAM"} ${String(index + 1).padStart(2, "0")}</span>
-          <button class="card-menu" type="button" aria-label="Delete ${escapeHtml(program.title)}"><i data-lucide="trash-2"></i></button>
-        </div>
-        <div class="card-orb"><i data-lucide="${isVideo ? "youtube" : index % 3 === 0 ? "dumbbell" : index % 3 === 1 ? "flame" : "activity"}"></i></div>
-        <h3></h3>
-        <p class="card-meta">${isVideo ? "Follow-along video workout" : `${program.exercises.length} exercises · ${totalSets(program)} sets`}</p>
-        ${program.lastCompletedAt ? `<p class="card-completed"><i data-lucide="circle-check"></i>${formatLastCompleted(program.lastCompletedAt)}</p>` : ""}
-        <div class="card-bottom">
-          <span class="card-duration"><i data-lucide="${isVideo ? "play-square" : "clock-3"}"></i> ${isVideo ? "WATCH & TRAIN" : `~${estimateMinutes(program)} MIN`}</span>
-          <button class="start-button" type="button" aria-label="Start ${escapeHtml(program.title)}"><i data-lucide="play"></i></button>
+    programs.forEach((program, programIndex) => {
+      const isExpanded = expandedProgramIds.has(program.id);
+      const group = document.createElement("article");
+      group.className = `program-group${isExpanded ? " is-expanded" : ""}`;
+      group.innerHTML = `
+        <button class="program-summary" type="button" aria-expanded="${isExpanded}">
+          <span class="program-week"><i data-lucide="calendar-range"></i><strong>12</strong><small>WEEKS</small></span>
+          <span class="program-summary-copy">
+            <span class="card-type">TRAINING PROGRAM ${String(programIndex + 1).padStart(2, "0")}</span>
+            <strong class="program-group-title"></strong>
+            <span class="program-group-description"></span>
+          </span>
+          <span class="program-summary-end">
+            <span>${program.routines.length} ${program.routines.length === 1 ? "routine" : "routines"}</span>
+            <i class="program-chevron" data-lucide="chevron-down"></i>
+          </span>
+        </button>
+        <div class="routine-panel" ${isExpanded ? "" : "hidden"}>
+          <div class="routine-panel-heading">
+            <div><p class="kicker">ROUTINES</p><h3>Choose today’s work</h3></div>
+            <span>Complete any routine at least 90% to log it.</span>
+          </div>
+          <div class="routine-grid"></div>
         </div>`;
-      card.querySelector("h3").textContent = program.title;
-      card.querySelector(".start-button").addEventListener("click", () => isVideo ? startVideoProgram(program) : startWorkout(program));
-      card.querySelector(".card-menu").addEventListener("click", () => deleteProgram(program.id));
-      els.grid.appendChild(card);
-    });
+      group.querySelector(".program-group-title").textContent = program.title;
+      group.querySelector(".program-group-description").textContent = program.description;
 
-    const addCard = document.createElement("button");
-    addCard.className = "empty-card";
-    addCard.type = "button";
-    addCard.innerHTML = `<div><i data-lucide="plus-circle"></i><strong>Add another program</strong><span>Import a workout from JSON</span></div>`;
-    addCard.addEventListener("click", openProgramDialog);
-    els.grid.appendChild(addCard);
-    els.count.textContent = `${programs.length} ${programs.length === 1 ? "program" : "programs"}`;
+      const summary = group.querySelector(".program-summary");
+      const panel = group.querySelector(".routine-panel");
+      summary.addEventListener("click", () => {
+        const expanded = summary.getAttribute("aria-expanded") === "true";
+        summary.setAttribute("aria-expanded", String(!expanded));
+        panel.hidden = expanded;
+        group.classList.toggle("is-expanded", !expanded);
+        if (expanded) expandedProgramIds.delete(program.id);
+        else expandedProgramIds.add(program.id);
+      });
+
+      const routineGrid = group.querySelector(".routine-grid");
+      program.routines.forEach((routine, routineIndex) => routineGrid.appendChild(createRoutineCard(routine, routineIndex)));
+
+      const addCard = document.createElement("button");
+      addCard.className = "empty-card routine-add-card";
+      addCard.type = "button";
+      addCard.innerHTML = `<div><i data-lucide="plus-circle"></i><strong>Add another routine</strong><span>Import a workout from JSON</span></div>`;
+      addCard.addEventListener("click", openProgramDialog);
+      routineGrid.appendChild(addCard);
+      els.grid.appendChild(group);
+    });
+    const routineCount = programs.reduce((sum, program) => sum + program.routines.length, 0);
+    els.count.textContent = `${programs.length} ${programs.length === 1 ? "program" : "programs"} · ${routineCount} routines`;
     refreshIcons();
+  }
+
+  function createRoutineCard(routine, index) {
+    const isVideo = Boolean(routine.youtubeVideoId);
+    const card = document.createElement("article");
+    card.className = "program-card routine-card";
+    card.innerHTML = `
+      <div class="card-top">
+        <span class="card-type">${isVideo ? "VIDEO" : "ROUTINE"} ${String(index + 1).padStart(2, "0")}</span>
+        <button class="card-menu" type="button" aria-label="Delete ${escapeHtml(routine.title)}"><i data-lucide="trash-2"></i></button>
+      </div>
+      <div class="card-orb"><i data-lucide="${isVideo ? "youtube" : index % 3 === 0 ? "dumbbell" : index % 3 === 1 ? "flame" : "activity"}"></i></div>
+      <h3></h3>
+      <p class="card-meta">${isVideo ? "Follow-along video workout" : `${routine.exercises.length} exercises · ${totalSets(routine)} sets`}</p>
+      ${routine.lastCompletedAt ? `<p class="card-completed"><i data-lucide="circle-check"></i>${formatLastCompleted(routine.lastCompletedAt)}</p>` : ""}
+      <div class="card-bottom">
+        <span class="card-duration"><i data-lucide="${isVideo ? "play-square" : "clock-3"}"></i> ${isVideo ? "WATCH & TRAIN" : `~${estimateMinutes(routine)} MIN`}</span>
+        <button class="start-button" type="button" aria-label="Start ${escapeHtml(routine.title)}"><i data-lucide="play"></i></button>
+      </div>`;
+    card.querySelector("h3").textContent = routine.title;
+    card.querySelector(".start-button").addEventListener("click", () => isVideo ? startVideoProgram(routine) : startWorkout(routine));
+    card.querySelector(".card-menu").addEventListener("click", () => deleteRoutine(routine.id));
+    return card;
   }
 
   function escapeHtml(value) {
@@ -302,22 +394,30 @@ My goal, experience, available equipment, workout duration, and preferences are:
     return `Last completed ${days} ${days === 1 ? "day" : "days"} ago`;
   }
 
-  function markProgramCompleted(program) {
+  function findRoutine(id) {
+    for (const program of programs) {
+      const routine = program.routines.find((item) => item.id === id);
+      if (routine) return routine;
+    }
+    return null;
+  }
+
+  function markRoutineCompleted(routine) {
     const completedAt = new Date().toISOString();
-    program.lastCompletedAt = completedAt;
-    const storedProgram = programs.find((item) => item.id === program.id);
-    if (storedProgram) storedProgram.lastCompletedAt = completedAt;
+    routine.lastCompletedAt = completedAt;
+    const storedRoutine = findRoutine(routine.id);
+    if (storedRoutine) storedRoutine.lastCompletedAt = completedAt;
     persistPrograms();
     renderPrograms();
   }
 
-  function deleteProgram(id) {
-    const program = programs.find((item) => item.id === id);
-    if (!program || !window.confirm(`Delete “${program.title}”?`)) return;
-    programs = programs.filter((item) => item.id !== id);
+  function deleteRoutine(id) {
+    const routine = findRoutine(id);
+    if (!routine || !window.confirm(`Delete routine “${routine.title}”?`)) return;
+    programs.forEach((program) => { program.routines = program.routines.filter((item) => item.id !== id); });
     persistPrograms();
     renderPrograms();
-    showToast("Program deleted", "trash-2");
+    showToast("Routine deleted", "trash-2");
   }
 
   function showView(view) {
@@ -347,15 +447,16 @@ My goal, experience, available equipment, workout duration, and preferences are:
   function saveProgram() {
     try {
       const raw = els.jsonInput.value.trim();
-      if (!raw) throw new Error("Paste your program JSON first.");
+      if (!raw) throw new Error("Paste your routine JSON first.");
       const parsed = JSON.parse(raw);
-      validateProgram(parsed);
-      programs.unshift(normalizeProgram(parsed));
+      validateRoutine(parsed);
+      programs[0].routines.unshift(normalizeRoutine(parsed));
+      expandedProgramIds.add(programs[0].id);
       persistPrograms();
       renderPrograms();
       closeProgramDialog();
       els.jsonInput.value = "";
-      showToast("Program saved");
+      showToast("Routine saved");
     } catch (error) {
       els.jsonError.textContent = error instanceof SyntaxError ? "That JSON has a syntax error. Check commas, quotes, and brackets." : error.message;
       els.jsonError.hidden = false;
@@ -432,7 +533,7 @@ My goal, experience, available equipment, workout duration, and preferences are:
     resetYouTubeMount();
     videoSession = { program, startedAt: Date.now(), completed: false, credited: false };
     els.videoTitle.textContent = program.title;
-    els.videoDescription.textContent = program.description || "Follow along at your own pace. The program completes when the video ends.";
+    els.videoDescription.textContent = program.description || "Follow along at your own pace. The routine completes when the video ends.";
     els.videoCompletionHint.textContent = "This session finishes automatically when the video ends.";
     els.finishVideo.hidden = true;
     els.videoLoading.hidden = false;
@@ -495,7 +596,7 @@ My goal, experience, available equipment, workout duration, and preferences are:
       const currentTime = youtubePlayer.getCurrentTime();
       if (duration > 0 && currentTime / duration >= 0.9) {
         videoSession.credited = true;
-        markProgramCompleted(videoSession.program);
+        markRoutineCompleted(videoSession.program);
         stopVideoProgressTracking();
       }
     } catch (_) { /* The player may not be ready or available in standalone mode. */ }
@@ -504,7 +605,7 @@ My goal, experience, available equipment, workout duration, and preferences are:
   function showVideoError(errorCode) {
     if (!videoSession) return;
     const messages = {
-      2: ["The YouTube link is invalid.", "Check the URL or replace this program with a valid public video."],
+      2: ["The YouTube link is invalid.", "Check the URL or replace this routine with a valid public video."],
       5: ["YouTube could not play this video here.", "Try opening it on YouTube or choose a different video."],
       100: ["This video is unavailable.", "It may have been removed or made private."],
       101: ["The video owner disabled embedding.", "Repflow cannot override this YouTube setting. Choose another video or open it on YouTube."],
@@ -532,7 +633,7 @@ My goal, experience, available equipment, workout duration, and preferences are:
     videoSession.completed = true;
     if (!videoSession.credited) {
       videoSession.credited = true;
-      markProgramCompleted(videoSession.program);
+      markRoutineCompleted(videoSession.program);
     }
     stopVideoProgressTracking();
     const elapsed = Math.max(1, Math.round((Date.now() - videoSession.startedAt) / 1000));
@@ -725,7 +826,7 @@ My goal, experience, available equipment, workout duration, and preferences are:
     const completedIncludingCurrent = completedBeforeCurrent + 1;
     if (completedIncludingCurrent / totalSets(workout.program) >= 0.9) {
       workout.credited = true;
-      markProgramCompleted(workout.program);
+      markRoutineCompleted(workout.program);
     }
   }
 
@@ -783,7 +884,7 @@ My goal, experience, available equipment, workout duration, and preferences are:
 
   function completeWorkout(playFinishSound = true) {
     clearTimer();
-    if (!workout.credited) markProgramCompleted(workout.program);
+    if (!workout.credited) markRoutineCompleted(workout.program);
     if (playFinishSound) beep(true);
     const elapsed = Math.max(1, Math.round((Date.now() - workout.startedAt) / 1000));
     els.finishTime.textContent = formatTime(elapsed);

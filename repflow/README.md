@@ -21,9 +21,11 @@ Then open `http://localhost:8000`.
 
 GitHub Pages supplies HTTPS, which enables installation and the offline service worker. On iPhone, open the published page in Safari, tap **Share**, then **Add to Home Screen**.
 
-## Program JSON
+## Programs and routine JSON
 
-Programs are imported in the app and stored in the browser. Each exercise uses either `reps` or `durationSeconds`:
+Programs organize multiple routines. The default **Week 1–12** program contains the three bundled routines and expands from the homepage.
+
+The JSON importer adds a routine to that program. Each exercise uses either `reps` or `durationSeconds`:
 
 ```json
 {
@@ -49,7 +51,7 @@ Programs are imported in the app and stored in the browser. Each exercise uses e
 
 The **Ask AI** tab in the app contains a complete, copyable prompt for generating compatible JSON.
 
-A YouTube follow-along video can also be saved as an entire program:
+A YouTube follow-along video can also be saved as a routine:
 
 ```json
 {
@@ -59,5 +61,5 @@ A YouTube follow-along video can also be saved as an entire program:
 }
 ```
 
-YouTube programs open in a responsive embedded player. The program finishes automatically when the video reaches its ended state.
+YouTube routines open in a responsive embedded player. The routine finishes automatically when the video reaches its ended state.
 An internet connection is required to load and play YouTube content.

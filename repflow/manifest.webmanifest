@@ -1,7 +1,7 @@
 {
   "name": "Repflow — Workout Timer",
   "short_name": "Repflow",
-  "description": "Build workout programs with JSON and run focused, timed sessions.",
+  "description": "Organize workout routines into programs and run focused, timed sessions.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
