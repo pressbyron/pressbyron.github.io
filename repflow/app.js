@@ -3,7 +3,10 @@
 
   const STORAGE_KEY = "repflow-library-v2";
   const LEGACY_STORAGE_KEY = "repflow-programs-v1";
+  const DEFAULT_ROUTINES_VERSION_KEY = "repflow-default-routines-version";
+  const DEFAULT_ROUTINES_VERSION = 2;
   const DEFAULT_PROGRAM_ID = "week-1-12";
+  const DEFAULT_PROGRAM_DESCRIPTION = "A balanced 12-week strength plan with four repeatable routines.";
   const TIMER_CIRCUMFERENCE = 622;
 
   const EXAMPLE_PROGRAM = {
@@ -33,6 +36,24 @@
     title: "Follow-Along Mobility",
     description: "A guided mobility session from YouTube.",
     youtubeUrl: "https://www.youtube.com/watch?v=M7lc1UVf-VE"
+  };
+
+  const KETTLEBELL_LEG_STRENGTH_PROGRAM = {
+    title: "40 Min Kettlebell Leg Strength",
+    description: "Leg-focused strength workout using 8 kg and 12 kg kettlebells, with a short warmup and core finisher.",
+    restSeconds: 60,
+    exercises: [
+      { title: "Bodyweight Squat", sets: 1, reps: 15, description: "Move slowly and warm up the hips and knees.", restSeconds: 15 },
+      { title: "Alternating Reverse Lunge", sets: 1, reps: 10, description: "Use bodyweight and keep the front foot planted.", restSeconds: 15 },
+      { title: "Glute Bridge", sets: 1, reps: 15, description: "Squeeze the glutes without arching the lower back.", restSeconds: 30 },
+      { title: "Double Kettlebell Split Squat", sets: 3, reps: 8, description: "Hold 8 kg and 12 kg at your sides and swap hands each set.", restSeconds: 75 },
+      { title: "Double Kettlebell Reverse Lunge", sets: 3, reps: 8, description: "Hold both bells at your sides and stay tall through the torso.", restSeconds: 75 },
+      { title: "Slow Goblet Squat", sets: 3, reps: 12, description: "Use 12 kg, lower for 3 seconds and drive up strongly.", restSeconds: 60 },
+      { title: "Kettlebell Sumo Squat", sets: 3, reps: 12, description: "Use a wide stance and keep your torso upright.", restSeconds: 60 },
+      { title: "Weighted Glute Bridge", sets: 3, reps: 15, description: "Place the kettlebell on your hips and squeeze at the top.", restSeconds: 45 },
+      { title: "Standing Calf Raise", sets: 3, reps: 18, description: "Hold both kettlebells and pause briefly at the top.", restSeconds: 30 },
+      { title: "Dead Bug", sets: 2, reps: 10, description: "Move slowly and keep your lower back gently pressed down.", restSeconds: 30 }
+    ]
   };
 
   const DEFAULT_VIDEO_PROGRAMS = [
@@ -140,6 +161,7 @@ My goal, experience, available equipment, workout duration, and preferences are:
       const storedLibrary = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (Array.isArray(storedLibrary) && storedLibrary.length) {
         const normalizedLibrary = storedLibrary.map(normalizeProgramGroup);
+        addDefaultRoutineUpdates(normalizedLibrary);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedLibrary));
         return normalizedLibrary;
       }
@@ -148,20 +170,33 @@ My goal, experience, available equipment, workout duration, and preferences are:
       if (Array.isArray(legacyRoutines) && legacyRoutines.length) {
         const migratedProgram = createProgramGroup(migrateLegacyRoutines(legacyRoutines));
         localStorage.setItem(STORAGE_KEY, JSON.stringify([migratedProgram]));
+        localStorage.setItem(DEFAULT_ROUTINES_VERSION_KEY, String(DEFAULT_ROUTINES_VERSION));
         return [migratedProgram];
       }
     } catch (_) { /* Fall back to a fresh default library. */ }
 
-    const defaultProgram = createProgramGroup([EXAMPLE_PROGRAM, ...DEFAULT_VIDEO_PROGRAMS]);
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify([defaultProgram])); } catch (_) { /* Storage may be unavailable. */ }
+    const defaultProgram = createProgramGroup([EXAMPLE_PROGRAM, KETTLEBELL_LEG_STRENGTH_PROGRAM, ...DEFAULT_VIDEO_PROGRAMS]);
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify([defaultProgram]));
+      localStorage.setItem(DEFAULT_ROUTINES_VERSION_KEY, String(DEFAULT_ROUTINES_VERSION));
+    } catch (_) { /* Storage may be unavailable. */ }
     return [defaultProgram];
+  }
+
+  function addDefaultRoutineUpdates(library) {
+    const storedVersion = Number(localStorage.getItem(DEFAULT_ROUTINES_VERSION_KEY)) || 1;
+    if (storedVersion >= DEFAULT_ROUTINES_VERSION) return;
+    const defaultProgram = library.find((program) => program.id === DEFAULT_PROGRAM_ID) || library[0];
+    defaultProgram.routines = dedupeRoutines([...defaultProgram.routines, normalizeRoutine(KETTLEBELL_LEG_STRENGTH_PROGRAM)]);
+    if (defaultProgram.id === DEFAULT_PROGRAM_ID) defaultProgram.description = DEFAULT_PROGRAM_DESCRIPTION;
+    localStorage.setItem(DEFAULT_ROUTINES_VERSION_KEY, String(DEFAULT_ROUTINES_VERSION));
   }
 
   function createProgramGroup(routines) {
     return {
       id: DEFAULT_PROGRAM_ID,
       title: "Week 1–12",
-      description: "A balanced 12-week strength plan with three repeatable routines.",
+      description: DEFAULT_PROGRAM_DESCRIPTION,
       routines: dedupeRoutines(routines.map(normalizeRoutine))
     };
   }
@@ -190,6 +225,7 @@ My goal, experience, available equipment, workout duration, and preferences are:
       const videoId = extractYouTubeVideoId(defaultRoutine.youtubeUrl);
       if (!routines.some((routine) => routine.youtubeVideoId === videoId)) routines.push(normalizeRoutine(defaultRoutine));
     });
+    routines.push(normalizeRoutine(KETTLEBELL_LEG_STRENGTH_PROGRAM));
     return routines;
   }
 
